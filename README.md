@@ -25,6 +25,23 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
+## Code quality
+
+Prettier and ESLint run automatically at three checkpoints:
+
+- On save in VS Code, Prettier formats the file and ESLint applies safe fixes.
+- Before each commit, Husky and lint-staged format and lint only staged files.
+- On pull requests and pushes to `develop/v1` or `main`, GitHub Actions checks the whole project.
+
+You can also run the checks manually:
+
+```bash
+npm run format:check
+npm run lint
+```
+
+To apply automatic fixes, run `npm run format` and `npm run lint:fix`.
+
 ## Get a fresh project
 
 When you're ready, run:
@@ -37,7 +54,6 @@ This command will move the starter code to the **app-example** directory and cre
 
 ### Other setup steps
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
 - If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
 - Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 

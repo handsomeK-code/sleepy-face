@@ -1,0 +1,12 @@
+# Dependencies and generated output
+node_modules/
+.expo/
+dist/
+coverage/
+android/
+ios/
+package-lock.json
+
+# Generated/design assets and specification documents
+assets/
+docs/
