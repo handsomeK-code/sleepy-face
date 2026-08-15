@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 
 const screens = [
-  { href: '/login', label: 'ログイン画面' },
+  { href: '/signin', label: 'サインイン画面' },
   { href: '/signup', label: '新規登録画面' },
   { href: '/profile-setup', label: 'プロフィール設定画面' },
   { href: '/home', label: 'ホーム画面' },
