@@ -88,8 +88,18 @@ Frontend call:
 supabase.auth.signInWithOAuth({
   provider: "google",
   options: {
-    redirectTo: string
+    redirectTo: "sleepyface://google-auth",
+    skipBrowserRedirect: true
   }
+});
+```
+
+The app opens the returned OAuth URL with an Expo browser auth session, receives the `sleepyface://google-auth` callback, extracts `access_token` and `refresh_token` from the returned URL, then calls:
+
+```ts
+supabase.auth.setSession({
+  access_token: string,
+  refresh_token: string
 });
 ```
 
@@ -98,28 +108,31 @@ Rules:
 - Google Login is the only supported MVP login method.
 - Supabase Auth provider configuration and Expo redirect URL configuration are required.
 - Supabase Auth's internal `user.id` is separate from the public User ID.
+- The MVP uses Supabase OAuth-only for Google Login, not native Google Sign-In or `signInWithIdToken`.
+- The callback redirect URL `sleepyface://google-auth` must be allow-listed in Supabase Auth.
+- Google provider tokens are not stored by the frontend in the MVP.
 
-### Get Current Session
+### Get Current Auth User
 
 Supabase feature:
 
-- Auth session
+- Auth user
 
 Frontend use:
 
-- Restore logged-in state on app launch.
+- Restore authenticated user state on app launch.
 
 Frontend call:
 
 ```ts
-supabase.auth.getSession();
+supabase.auth.getUser();
 ```
 
 Frontend behavior:
 
-- If no session exists, show Google Login.
-- If a session exists but no profile exists, show Initial Setup.
-- If a session and profile exist, show Home.
+- If no Auth User ID exists, show Google Login.
+- If an Auth User ID exists but no profile exists, show Initial Setup.
+- If an Auth User ID and profile exist, show Home.
 
 ## Profile API
 
@@ -551,4 +564,3 @@ Rules:
 
 - Profile failure history remains available even when Friends Feed Access is blocked.
 - Only Failure Cards with uploaded photos appear.
-
