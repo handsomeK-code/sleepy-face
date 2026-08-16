@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "sleepy-face",
-    "slug": "sleepy-face",
+    "slug": "sleepyface",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -37,6 +37,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c6f23530-8c9c-4f32-aa96-e593f6b00324"
+      }
+    },
+    "owner": "handsomeks-team"
   }
 }
