@@ -77,12 +77,13 @@ Exact package choices for camera, face detection, local alarm scheduling, and ne
 The MVP backend is Supabase:
 
 - Supabase Auth for Google Login
-- Supabase Postgres for durable app state
+- Supabase Postgres for current Profile, photo, and friend relation state
 - Supabase Row Level Security for user data access
-- Supabase RPC functions for shared business rules
-- Supabase Storage for Failure Card photos
+- Supabase RPC functions for shared business rules, starting with Profile creation
 
-The frontend should use the Supabase client directly for simple Auth, reads, Storage upload, and signed URL calls. It should use RPC functions when the backend must enforce consistent rules.
+Failure Card-specific Storage, Wake Up Challenge attempt persistence, and Friends Feed Access persistence are deferred backend work.
+
+The frontend should use the Supabase client directly for simple Auth and reads. It should use RPC functions when the backend must enforce consistent rules.
 
 Google Login uses Supabase OAuth-only for the MVP. The Expo app opens the Supabase OAuth URL with `expo-web-browser`, receives the `sleepyface://google-auth` custom-scheme redirect, and stores the resulting Supabase session through secure mobile storage. Native Google Sign-In, Nitro Google Sign-In, Credential Manager, One Tap, and `signInWithIdToken` are not used in the MVP.
 
