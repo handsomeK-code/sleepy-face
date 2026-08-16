@@ -33,16 +33,23 @@ export type OAuthTokens = {
 };
 
 export function extractOAuthTokensFromUrl(url: string): OAuthTokens {
-  const parsedUrl = new URL(url);
-  const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ''));
-  const queryParams = parsedUrl.searchParams;
+  try {
+    const parsedUrl = new URL(url);
+    const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ''));
+    const queryParams = parsedUrl.searchParams;
 
-  return {
-    accessToken:
-      hashParams.get('access_token') ?? queryParams.get('access_token'),
-    refreshToken:
-      hashParams.get('refresh_token') ?? queryParams.get('refresh_token'),
-  };
+    return {
+      accessToken:
+        hashParams.get('access_token') ?? queryParams.get('access_token'),
+      refreshToken:
+        hashParams.get('refresh_token') ?? queryParams.get('refresh_token'),
+    };
+  } catch {
+    return {
+      accessToken: null,
+      refreshToken: null,
+    };
+  }
 }
 
 export async function warmUpGoogleLogin(): Promise<void> {

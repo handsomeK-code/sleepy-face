@@ -26,10 +26,17 @@ type ProfileRow = {
   created_at: string;
 };
 
+type CreateProfileRpcData = {
+  profile_id: string;
+  user_id: string;
+  display_name: string;
+  created_at: string;
+};
+
 type AppRpcResponse =
   | {
       status: 'ok';
-      data?: unknown;
+      data?: CreateProfileRpcData;
     }
   | {
       status: 'error';
@@ -53,6 +60,15 @@ function mapProfile(row: ProfileRow): Profile {
     createdAt: row.created_at,
     displayName: row.display_name,
     id: row.id,
+    userId: row.user_id,
+  };
+}
+
+function mapCreatedProfile(row: CreateProfileRpcData): Profile {
+  return {
+    createdAt: row.created_at,
+    displayName: row.display_name,
+    id: row.profile_id,
     userId: row.user_id,
   };
 }
@@ -83,17 +99,29 @@ function isAppRpcResponse(data: unknown): data is AppRpcResponse {
 }
 
 function profileFromRpcData(data: unknown): Profile {
-  if (isAppRpcResponse(data)) {
-    if (data.status === 'error') {
-      const code = mapUserServiceErrorCode(data.code);
-
-      throw new UserServiceError(code, data.error, data);
-    }
-
-    return profileFromRpcData(data.data);
+  if (!isAppRpcResponse(data)) {
+    throw new UserServiceError(
+      'unexpected_error',
+      'Profile creation returned an invalid response.',
+      data,
+    );
   }
 
-  return mapProfile(data as ProfileRow);
+  if (data.status === 'error') {
+    const code = mapUserServiceErrorCode(data.code);
+
+    throw new UserServiceError(code, data.error, data);
+  }
+
+  if (!data.data) {
+    throw new UserServiceError(
+      'unexpected_error',
+      'Profile creation returned an empty response.',
+      data,
+    );
+  }
+
+  return mapCreatedProfile(data.data);
 }
 
 export async function getMyProfile(): Promise<Profile | null> {

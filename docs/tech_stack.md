@@ -35,7 +35,7 @@ From `package.json`:
 | `expo-glass-effect` | `~57.0.1` | Expo glass effect UI support |
 | `expo-image` | `~57.0.2` | Image rendering |
 | `expo-linking` | `~57.0.5` | Deep linking |
-| `expo-secure-store` | `^57.0.1` | Secure persisted Supabase Auth session storage |
+| `expo-secure-store` | `~57.0.1` | Secure persisted Supabase Auth session storage |
 | `expo-splash-screen` | `~57.0.6` | Splash screen |
 | `expo-status-bar` | `~57.0.1` | Status bar |
 | `expo-symbols` | `~57.0.2` | Symbol icons |

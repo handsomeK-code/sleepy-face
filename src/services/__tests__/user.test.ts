@@ -95,7 +95,7 @@ describe('user service', () => {
         data: {
           created_at: '2026-08-16T00:00:00.000Z',
           display_name: 'Sleepy User',
-          id: 'auth-user-id',
+          profile_id: 'auth-user-id',
           user_id: 'sleepy-user',
         },
         status: 'ok',
@@ -153,6 +153,24 @@ describe('user service', () => {
       publicUserId: 'sleepy-user',
     }).catch((error: unknown) => {
       expectUserServiceError(error, 'profile_already_created');
+    });
+  });
+
+  it('maps not-authenticated Profile creation to a typed user-service error', async () => {
+    mocks.rpc.mockResolvedValue({
+      data: {
+        code: 'not_authenticated',
+        error: 'Authentication is required.',
+        status: 'error',
+      },
+      error: null,
+    });
+
+    await createProfile({
+      displayName: 'Sleepy User',
+      publicUserId: 'sleepy-user',
+    }).catch((error: unknown) => {
+      expectUserServiceError(error, 'not_authenticated');
     });
   });
 

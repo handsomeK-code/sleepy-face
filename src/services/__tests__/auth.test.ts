@@ -76,6 +76,44 @@ describe('extractOAuthTokensFromUrl', () => {
       refreshToken: null,
     });
   });
+
+  it('returns the available refresh token when access token is missing', () => {
+    expect(
+      extractOAuthTokensFromUrl(
+        'sleepyface://google-auth#refresh_token=refresh',
+      ),
+    ).toEqual({
+      accessToken: null,
+      refreshToken: 'refresh',
+    });
+  });
+
+  it('returns the available access token when refresh token is missing', () => {
+    expect(
+      extractOAuthTokensFromUrl('sleepyface://google-auth#access_token=access'),
+    ).toEqual({
+      accessToken: 'access',
+      refreshToken: null,
+    });
+  });
+
+  it('returns null tokens for malformed callback URLs', () => {
+    expect(extractOAuthTokensFromUrl('not a callback url')).toEqual({
+      accessToken: null,
+      refreshToken: null,
+    });
+  });
+
+  it('ignores provider error params as auth tokens', () => {
+    expect(
+      extractOAuthTokensFromUrl(
+        'sleepyface://google-auth#error=access_denied&error_description=Denied',
+      ),
+    ).toEqual({
+      accessToken: null,
+      refreshToken: null,
+    });
+  });
 });
 
 describe('Google Login service', () => {
@@ -193,6 +231,14 @@ describe('Google Login service', () => {
 
     await startGoogleLogin().catch((error: unknown) => {
       expectGoogleLoginError(error, 'session_set_failed');
+    });
+  });
+
+  it('throws unexpected_error when an unexpected login failure occurs', async () => {
+    mocks.signInWithOAuth.mockRejectedValue(new Error('unexpected failure'));
+
+    await startGoogleLogin().catch((error: unknown) => {
+      expectGoogleLoginError(error, 'unexpected_error');
     });
   });
 
