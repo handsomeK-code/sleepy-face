@@ -1,5 +1,151 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { router } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+
+import {
+  GoogleLoginError,
+  coolDownGoogleLogin,
+  startGoogleLogin,
+  warmUpGoogleLogin,
+} from '@/services/auth';
+import { getMyProfile } from '@/services/user';
+
+function getLoginErrorMessage(error: unknown): string {
+  if (error instanceof GoogleLoginError) {
+    switch (error.code) {
+      case 'login_interrupted':
+        return 'Googleログインが中断されました。もう一度お試しください。';
+      case 'oauth_url_missing':
+      case 'provider_error':
+        return 'Googleログインを開始できませんでした。設定を確認してください。';
+      case 'missing_auth_tokens':
+      case 'session_set_failed':
+      case 'unexpected_error':
+        return 'ログインに失敗しました。時間をおいてもう一度お試しください。';
+    }
+  }
+
+  return 'ログインに失敗しました。時間をおいてもう一度お試しください。';
+}
 
 export default function SigninScreen() {
-  return <ScreenPlaceholder title="サインイン画面" />;
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    warmUpGoogleLogin().catch(() => undefined);
+
+    return () => {
+      coolDownGoogleLogin().catch(() => undefined);
+    };
+  }, []);
+
+  const handleGoogleLogin = useCallback(async () => {
+    setErrorMessage(null);
+    setIsLoading(true);
+
+    try {
+      await startGoogleLogin();
+      const profile = await getMyProfile();
+
+      if (profile) {
+        router.replace('/home');
+      } else {
+        router.replace('/profile-setup');
+      }
+    } catch (error) {
+      setErrorMessage(getLoginErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>SLEEPY FACE</Text>
+          <Text style={styles.title}>ログイン</Text>
+          <Text style={styles.description}>
+            Googleアカウントでログインしてください。
+          </Text>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={isLoading}
+          onPress={handleGoogleLogin}
+          style={({ pressed }) => [
+            styles.googleButton,
+            pressed && styles.buttonPressed,
+            isLoading && styles.buttonDisabled,
+          ]}
+        >
+          <Text style={styles.googleButtonText}>
+            {isLoading ? 'ログイン中...' : 'Googleでログイン'}
+          </Text>
+        </Pressable>
+
+        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+      </View>
+    </SafeAreaView>
+  );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f7fb',
+  },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  header: {
+    marginBottom: 28,
+  },
+  eyebrow: {
+    color: '#536dfe',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+    marginBottom: 10,
+  },
+  title: {
+    color: '#172033',
+    fontSize: 32,
+    fontWeight: '800',
+    marginBottom: 10,
+  },
+  description: {
+    color: '#657086',
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  googleButton: {
+    alignItems: 'center',
+    backgroundColor: '#172033',
+    borderRadius: 16,
+    justifyContent: 'center',
+    minHeight: 56,
+    paddingHorizontal: 20,
+  },
+  buttonPressed: {
+    opacity: 0.82,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  googleButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  errorText: {
+    color: '#b42318',
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 16,
+  },
+});

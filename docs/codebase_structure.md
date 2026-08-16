@@ -108,8 +108,8 @@ Service responsibilities:
 | file | responsibility |
 | --- | --- |
 | `alarm.ts` | Saved Alarm create/list/update/delete, next alarm calculation, local scheduling, and native alarm module calls. |
-| `auth.ts` | Supabase session restore and Google Login. |
-| `user.ts` | Profile creation and current profile lookup. |
+| `auth.ts` | Supabase OAuth-only Google Login, browser auth-session lifecycle, Auth User ID lookup, and auth-state subscription. |
+| `user.ts` | Initial Setup Profile lookup and Profile creation with public User ID and Display Name. |
 | `friend.ts` | Profile search, add Friend, and list Friends. |
 | `wakeChallenge.ts` | Daily Alarm Attempt start/completion, Challenge Failure recording, Failure Card creation, and Failure Photo upload. |
 
@@ -128,7 +128,7 @@ Responsibilities:
 
 | file | responsibility |
 | --- | --- |
-| `supabase.ts` | Create and export the Supabase client used by services. |
+| `supabase.ts` | Create and export the Supabase client used by services, including secure mobile auth storage. |
 
 ## `src/utils/`
 
@@ -230,4 +230,3 @@ The initial sketch included several items that do not match the current MVP scop
 | Logout in `auth.ts` | Out of scope for MVP docs. Add only if the product scope changes. |
 | Home showing "sleeping face" wording | Use Friends Feed and Failure Card terminology. |
 | Generic photo publishing | Only Quiz Failure creates a Failure Card through the backend RPC. |
-

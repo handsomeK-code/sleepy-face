@@ -2,222 +2,129 @@
 
 ## Purpose
 
-This document records the recommended Supabase Postgres schema for the MVP.
+This document records the current Supabase Postgres schema for the app.
 
-It covers tables, views, storage, constraints, and unresolved database decisions. API call shapes are documented separately in `api_contract.md`.
+The current online Supabase setup is intentionally smaller than the full product model. It supports Google Login, Initial Setup, simple photo records, and friend relations. Wake Up Challenge attempt tracking and Failure Card-specific persistence are deferred.
 
 ## Main Decisions
 
-- Use `profiles` instead of `users` for app profile data because Supabase Auth already owns authenticated users in `auth.users`.
-- Use `display_name` instead of `username` to match the project domain language.
-- Keep public `user_id` as the immutable friend-search handle.
-- Use `icon_url` if an optional profile image field is kept.
-- Do not create a custom `user_auth_providers` table for the MVP unless provider-specific audit data becomes necessary.
-- Use `failure_cards` plus the `failure-photos` Storage bucket instead of a generic `photos` table.
-- Use `friendships` with a canonical profile pair instead of directional `friends_relations` rows.
-- Add `daily_attempts` for one Daily Alarm Attempt per user per local date.
+- Use Supabase Auth's built-in `auth.users` table for authenticated accounts.
+- Do not create an app-owned `users` table.
+- Do not create `user_auth_providers`; Google provider identity is owned by Supabase Auth.
+- Use `profiles` for app profile data tied one-to-one to `auth.users`.
+- Use `display_name` in code and docs instead of `username`.
+- Keep `user_id` as the public immutable User ID for Friend Search.
+- Keep `icon_url` as an optional profile image field, even though profile icons are not required in the MVP UI.
+- Use simple `photos` records for uploaded image URLs in the current schema.
+- Use `friends_relations` for directional friend relation rows in the current schema.
+- Defer `daily_attempts`, `failure_cards`, canonical `friendships`, feed access persistence, and Failure Card-specific storage rules until the Wake Up Challenge backend is implemented.
 
 ## Tables
 
 ### profiles
 
-One row per authenticated app user.
+One row per authenticated app user. The row ID is the Auth User ID from Supabase Auth.
 
-| column name | type | constraints / memo |
-| --- | --- | --- |
-| id | uuid | primary key, references `auth.users(id)` |
-| user_id | varchar | unique public User ID used for friend search |
-| display_name | varchar | required public Display Name |
-| icon_url | varchar | optional profile icon URL, not required for MVP UI |
-| created_at | timestamptz | default `now()` |
+| column name  | type        | constraints / memo                                     |
+| ------------ | ----------- | ------------------------------------------------------ |
+| `id`         | uuid        | primary key, references `auth.users(id)`               |
+| `user_id`    | varchar     | unique public User ID used for Friend Search           |
+| `display_name` | varchar  | required public Display Name                           |
+| `icon_url`   | varchar     | optional profile icon URL                              |
+| `created_at` | timestamptz | default `now()`                                        |
 
-Constraints:
+Rules:
 
-- `user_id` unique and not null.
-- `display_name` not null.
-- `user_id` and `display_name` are immutable in the MVP.
+- `profiles.id` is the internal Auth User ID.
+- `profiles.user_id` is the public User ID.
+- `profiles.user_id` must not be confused with the Auth User ID.
+- A user can create only their own Profile.
+- Public User ID and Display Name are immutable for the MVP.
 
-### daily_attempts
+### photos
 
-One row per user per local calendar date where an online scheduled alarm attempt starts.
+Simple image records associated with a Profile.
 
-| column name | type | constraints / memo |
-| --- | --- | --- |
-| id | uuid | primary key |
-| profile_id | uuid | references `profiles(id)` |
-| local_date | date | user's local date for the attempt |
-| timezone | varchar | IANA timezone string from the device |
-| scheduled_for_local | timestamptz | scheduled alarm time as reported by the frontend |
-| saved_alarm_local_id | varchar | local Saved Alarm ID |
-| state | varchar | `active` or `completed` |
-| result | varchar | nullable challenge result |
-| face_verified | boolean | result evidence from the challenge |
-| correct_quiz_count | integer | should be `3` for success |
-| feed_access_until | timestamptz | nullable timestamp for current-day feed access/block logic |
-| created_at | timestamptz | default `now()` |
-| completed_at | timestamptz | set when attempt finishes |
+| column name  | type        | constraints / memo                       |
+| ------------ | ----------- | ---------------------------------------- |
+| `id`         | uuid        | primary key, default `gen_random_uuid()` |
+| `profile_id` | uuid        | references `profiles(id)`                |
+| `image_url`  | varchar     | image URL                                |
+| `created_at` | timestamptz | default `now()`                          |
 
-Allowed `result` values:
+Rules:
 
-- `success`
-- `quiz_failure`
-- `timeout_failure`
-- `bad_photo_failure`
-- `active_offline_failure`
-- `abandoned_failure`
+- Users can read and insert only their own photo records in the current policy set.
+- This table is not yet the final Failure Card model.
 
-Constraints:
+### friends_relations
 
-- Unique `(profile_id, local_date)`.
-- `state` should be `active` before completion and `completed` after success or failure.
-- Result completion should happen through RPC functions, not direct table updates.
+Directional friend relation rows between Profiles.
 
-### friendships
+| column name         | type        | constraints / memo                       |
+| ------------------- | ----------- | ---------------------------------------- |
+| `id`                | uuid        | primary key, default `gen_random_uuid()` |
+| `profile_id`        | uuid        | references `profiles(id)`                |
+| `friend_profile_id` | uuid        | references `profiles(id)`                |
+| `created_at`        | timestamptz | default `now()`                          |
 
-Mutual friend relationship between two profiles.
+Rules:
 
-| column name | type | constraints / memo |
-| --- | --- | --- |
-| id | uuid | primary key |
-| profile_id_low | uuid | references `profiles(id)` |
-| profile_id_high | uuid | references `profiles(id)` |
-| created_by | uuid | references `profiles(id)`, user who added the friend |
-| created_at | timestamptz | default `now()` |
-
-Constraints:
-
-- `profile_id_low < profile_id_high` by UUID comparison or enforced in the `add_friend` RPC.
-- Unique `(profile_id_low, profile_id_high)`.
-- `profile_id_low` and `profile_id_high` cannot be equal.
-- No status column is needed because friendship is mutual immediately.
-
-### failure_cards
-
-Friends-visible record created only for Quiz Failure.
-
-| column name | type | constraints / memo |
-| --- | --- | --- |
-| id | uuid | primary key |
-| profile_id | uuid | references `profiles(id)` |
-| daily_attempt_id | uuid | references `daily_attempts(id)` |
-| photo_path | varchar | path in Supabase Storage bucket `failure-photos` |
-| failed_on | date | user's local failure date |
-| created_at | timestamptz | default `now()` |
-
-Constraints:
-
-- Unique `daily_attempt_id`.
-- `photo_path` not null.
-- Failure Cards are not deletable or hideable in the MVP.
-
-## Views
-
-### my_friends
-
-Current user's mutual friends joined with profile public fields.
-
-Fields:
-
-- `friend_profile_id`
-- `user_id`
-- `display_name`
-- `created_at`
-
-### friends_failure_feed
-
-Failure Cards from the current user's friends, newest first.
-
-Fields:
-
-- `id`
-- `profile_id`
-- `user_id`
-- `display_name`
-- `photo_path`
-- `failed_on`
-- `created_at`
-
-### my_failure_cards
-
-Current user's own Failure Cards for Profile, newest first.
-
-Fields:
-
-- `id`
-- `photo_path`
-- `failed_on`
-- `created_at`
-
-## Storage
-
-### failure-photos
-
-Stores uploaded JPEG images for Quiz Failure only.
-
-Recommended object path:
-
-```text
-{auth_user_id}/{attempt_id}.jpg
-```
-
-Storage rules:
-
-- Users can upload only to their own path.
-- Upload should use `upsert: false`.
-- Users can read their own Failure Card photos.
-- Users can read friends' Failure Card photos only when Friends Feed Access allows it.
-- Signed URLs or a controlled signing RPC should be used for display.
+- `profile_id` and `friend_profile_id` cannot be the same Profile.
+- `(profile_id, friend_profile_id)` is unique.
+- The current policy allows a user to insert relations only from their own Profile.
+- The current policy allows a user to read relations where they are either side of the relation.
 
 ## RPC Functions
 
-Required MVP RPC functions:
+### create_profile
 
-- `create_profile`
-- `start_daily_attempt`
-- `complete_challenge_success`
-- `record_challenge_failure`
-- `search_profiles`
-- `add_friend`
-- `get_friends_feed_access`
+Creates the authenticated user's Profile after Google Login.
 
-These RPCs should enforce rules that must stay consistent across clients:
+Inputs:
 
-- Immutable profile creation
-- One Daily Alarm Attempt per local date
-- Valid challenge completion
-- Quiz-Failure-only Failure Card creation
-- Friends Feed Access changes
-- Mutual friendship creation
+| argument       | type | memo                          |
+| -------------- | ---- | ----------------------------- |
+| `user_id`      | text | public User ID                |
+| `display_name` | text | public Display Name           |
+
+Success payload:
+
+```json
+{
+  "status": "ok",
+  "data": {
+    "profile_id": "uuid",
+    "user_id": "public-user-id",
+    "display_name": "Display Name",
+    "created_at": "timestamp"
+  }
+}
+```
+
+Error codes:
+
+- `not_authenticated`
+- `profile_already_created`
+- `user_id_already_taken`
 
 ## Row Level Security
 
-RLS policies should enforce:
+Current RLS policies:
 
-- Users can read and create only their own profile where appropriate.
-- Users cannot edit public User ID or Display Name after creation in the MVP.
-- Users can read their own Daily Alarm Attempts.
-- Challenge result writes must go through RPC functions.
-- Users can read their own friends list.
-- Users can read Friends Feed rows only for friends and only when Friends Feed Access allows it.
-- Users can read their own Failure Cards even when Friends Feed Access is blocked.
-- Users cannot manually insert, update, delete, or hide Failure Cards.
+- Authenticated users can read Profiles for Friend Search.
+- Authenticated users can insert only their own Profile.
+- Profiles cannot be updated or deleted through current app policies.
+- Authenticated users can read and insert only their own photo records.
+- Authenticated users can read friend relation rows where they are either side.
+- Authenticated users can insert friend relation rows only from their own Profile.
 
-## Initial Draft Mapping
+## Deferred Backend Tables
 
-| initial draft table | recommended object | reason |
-| --- | --- | --- |
-| `users` | `profiles` | avoids confusion with Supabase `auth.users` |
-| `user_auth_providers` | Supabase Auth provider identities | custom provider table is unnecessary for MVP |
-| `photos` | `failure_cards` + `failure-photos` bucket | photos are only valid when tied to Quiz Failure |
-| `friends_relations` | `friendships` | canonical mutual pair prevents duplicate directional rows |
+These tables were part of the larger MVP design, but they are not in the current manual Supabase schema:
 
-## Unresolved Database Decisions
+- `daily_attempts`
+- `failure_cards`
+- canonical mutual `friendships`
 
-1. Should `icon_url` be included in the MVP schema now, or postponed until profile icons exist in the UI?
-2. Should public `user_id` have format rules such as lowercase only, allowed characters, minimum length, and maximum length?
-3. Should `display_name` have a maximum length?
-4. Are duplicate Display Names allowed? Current docs imply yes because public `user_id` is the unique identifier.
-5. Should `scheduled_for_local` be `timestamptz` or split into local date/time fields? The API currently passes local strings from the device.
-6. Should Friends Feed Access use only `daily_attempts.feed_access_until`, or should it have a separate table if access rules become more complex later?
-7. Should Storage signed URL creation be handled directly by the frontend or through a controlled RPC to enforce friends-only photo access more strictly?
-
+Add them later when implementing Wake Up Challenge result persistence, Friends Feed Access, and Failure Card behavior.

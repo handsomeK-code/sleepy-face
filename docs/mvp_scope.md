@@ -65,6 +65,7 @@ The MVP supports:
 Rules:
 
 - A user may have multiple Saved Alarms.
+- Saved Alarms are stored locally on the device and are not stored in Supabase in the MVP.
 - Saved Alarms repeat by selected days of the week, including weekends.
 - A Saved Alarm must include at least one selected weekday.
 - Two Saved Alarms cannot include the same selected weekday.
@@ -213,4 +214,3 @@ The following are not part of the MVP:
 - Admin features
 - Server-side face detection
 - Detailed visual design specification
-

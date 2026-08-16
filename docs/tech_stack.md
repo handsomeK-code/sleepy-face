@@ -23,6 +23,7 @@ From `package.json`:
 
 | dependency | version | purpose |
 | --- | --- | --- |
+| `@supabase/supabase-js` | `^2.112.3` | Supabase Auth, Postgres reads, RPC calls, Storage upload/signed URL |
 | `expo` | `~57.0.12` | Expo app runtime |
 | `react` | `19.2.3` | React runtime |
 | `react-native` | `0.86.2` | Native app framework |
@@ -34,6 +35,7 @@ From `package.json`:
 | `expo-glass-effect` | `~57.0.1` | Expo glass effect UI support |
 | `expo-image` | `~57.0.2` | Image rendering |
 | `expo-linking` | `~57.0.5` | Deep linking |
+| `expo-secure-store` | `~57.0.1` | Secure persisted Supabase Auth session storage |
 | `expo-splash-screen` | `~57.0.6` | Splash screen |
 | `expo-status-bar` | `~57.0.1` | Status bar |
 | `expo-symbols` | `~57.0.2` | Symbol icons |
@@ -44,6 +46,7 @@ From `package.json`:
 | `react-native-reanimated` | `4.5.1` | Animation support |
 | `react-native-safe-area-context` | `~5.7.0` | Safe area handling |
 | `react-native-screens` | `~4.26.0` | Native screen primitives |
+| `react-native-url-polyfill` | `^4.0.0` | URL support required by Supabase in React Native |
 | `react-native-web` | `~0.21.0` | Web support |
 | `react-native-worklets` | `0.10.1` | Worklet runtime |
 
@@ -53,6 +56,7 @@ From `package.json`:
 | --- | --- | --- |
 | `typescript` | `~6.0.3` | TypeScript compiler |
 | `@types/react` | `~19.2.2` | React TypeScript types |
+| `vitest` | `^4.1.10` | Service-boundary tests |
 
 ## Required MVP Dependencies Not Yet Installed
 
@@ -60,8 +64,6 @@ These are required by the product/API docs but are not currently installed in `p
 
 | dependency / capability | purpose |
 | --- | --- |
-| Supabase JS client | Auth, Postgres reads, RPC calls, Storage upload/signed URL |
-| Google OAuth through Supabase Auth | MVP login method |
 | Camera library, likely `expo-camera` | Photo Capture during Wake Up Challenge |
 | Face detection library, likely ML Kit through a React Native package | Face Verification on device |
 | SQLite, likely `expo-sqlite` | Local Saved Alarm storage and active attempt state |
@@ -75,12 +77,15 @@ Exact package choices for camera, face detection, local alarm scheduling, and ne
 The MVP backend is Supabase:
 
 - Supabase Auth for Google Login
-- Supabase Postgres for durable app state
+- Supabase Postgres for current Profile, photo, and friend relation state
 - Supabase Row Level Security for user data access
-- Supabase RPC functions for shared business rules
-- Supabase Storage for Failure Card photos
+- Supabase RPC functions for shared business rules, starting with Profile creation
 
-The frontend should use the Supabase client directly for simple Auth, reads, Storage upload, and signed URL calls. It should use RPC functions when the backend must enforce consistent rules.
+Failure Card-specific Storage, Wake Up Challenge attempt persistence, and Friends Feed Access persistence are deferred backend work.
+
+The frontend should use the Supabase client directly for simple Auth and reads. It should use RPC functions when the backend must enforce consistent rules.
+
+Google Login uses Supabase OAuth-only for the MVP. The Expo app opens the Supabase OAuth URL with `expo-web-browser`, receives the `sleepyface://google-auth` custom-scheme redirect, and stores the resulting Supabase session through secure mobile storage. Native Google Sign-In, Nitro Google Sign-In, Credential Manager, One Tap, and `signInWithIdToken` are not used in the MVP.
 
 ## Local Device Storage
 
