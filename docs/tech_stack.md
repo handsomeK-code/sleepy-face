@@ -66,7 +66,6 @@ These are required by the product/API docs but are not currently installed in `p
 | --- | --- |
 | Camera library, likely `expo-camera` | Photo Capture during Wake Up Challenge |
 | Face detection library, likely ML Kit through a React Native package | Face Verification on device |
-| SQLite, likely `expo-sqlite` | Local Saved Alarm storage and active attempt state |
 | Local notification/alarm scheduling capability | Ring scheduled alarms on device |
 | Network status detection capability | Universal Offline Page and active-offline failure handling |
 
@@ -97,6 +96,8 @@ Local storage should hold:
 - Selected weekdays
 - Local saved alarm ID
 - Active Daily Alarm Attempt state while the challenge is running
+
+Saved Alarms use `@react-native-async-storage/async-storage` for MVP local key-value persistence. Active Daily Alarm Attempt state and native ringing mechanics are later slices and may use a different local persistence mechanism if needed.
 
 Supabase should not store Saved Alarm schedules in the MVP unless the product scope changes.
 
