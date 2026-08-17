@@ -12,6 +12,19 @@ export type CreateProfileInput = {
   displayName: string;
 };
 
+export type InitialSetupValidationErrorCode =
+  'public_user_id_invalid' | 'display_name_required' | 'display_name_too_long';
+
+export type InitialSetupValidationResult =
+  | {
+      isValid: true;
+      value: CreateProfileInput;
+    }
+  | {
+      isValid: false;
+      code: InitialSetupValidationErrorCode;
+    };
+
 export type UserServiceErrorCode =
   | 'user_id_already_taken'
   | 'profile_already_created'
@@ -44,6 +57,9 @@ type AppRpcResponse =
       code?: string;
     };
 
+const PUBLIC_USER_ID_PATTERN = /^[a-z0-9_-]{3,20}$/;
+const DISPLAY_NAME_MAX_LENGTH = 30;
+
 export class UserServiceError extends Error {
   constructor(
     public readonly code: UserServiceErrorCode,
@@ -53,6 +69,47 @@ export class UserServiceError extends Error {
     super(message);
     this.name = 'UserServiceError';
   }
+}
+
+export function normalizePublicUserId(publicUserId: string): string {
+  return publicUserId.trim().toLowerCase();
+}
+
+export function validateInitialSetupInput({
+  displayName,
+  publicUserId,
+}: CreateProfileInput): InitialSetupValidationResult {
+  const normalizedPublicUserId = normalizePublicUserId(publicUserId);
+  const trimmedDisplayName = displayName.trim();
+
+  if (!PUBLIC_USER_ID_PATTERN.test(normalizedPublicUserId)) {
+    return {
+      code: 'public_user_id_invalid',
+      isValid: false,
+    };
+  }
+
+  if (trimmedDisplayName.length === 0) {
+    return {
+      code: 'display_name_required',
+      isValid: false,
+    };
+  }
+
+  if (Array.from(trimmedDisplayName).length > DISPLAY_NAME_MAX_LENGTH) {
+    return {
+      code: 'display_name_too_long',
+      isValid: false,
+    };
+  }
+
+  return {
+    isValid: true,
+    value: {
+      displayName: trimmedDisplayName,
+      publicUserId: normalizedPublicUserId,
+    },
+  };
 }
 
 function mapProfile(row: ProfileRow): Profile {
