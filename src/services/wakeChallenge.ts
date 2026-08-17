@@ -11,6 +11,7 @@ type SavedFailurePhoto = {
 };
 
 type UploadedFailurePhoto = {
+  imageUrl: string;
   localUri: string;
   storagePath: string;
 };
@@ -74,8 +75,16 @@ export async function uploadFailurePhoto(localPhotoUri: string) {
     throw new Error('アップロードする写真がローカルにありません。');
   }
 
-  // Supabase Storageでは、ユーザーや日時でファイル名を分けると上書きを避けやすい。
-  const storagePath = `local-test/${Date.now()}.jpg`;
+  const userResult = await supabase.auth.getUser();
+
+  if (userResult.error || !userResult.data.user) {
+    throw new Error('写真のアップロードにはログインが必要です。');
+  }
+
+  const profileId = userResult.data.user.id;
+
+  // ユーザーIDと日時でファイルを分けると、他ユーザーの写真や再撮影分と衝突しにくい。
+  const storagePath = `${profileId}/${Date.now()}.jpg`;
   const photoResponse = await fetch(localPhotoUri);
   const photoBody = await photoResponse.arrayBuffer();
 
@@ -90,7 +99,22 @@ export async function uploadFailurePhoto(localPhotoUri: string) {
     throw error;
   }
 
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(FAILURE_PHOTO_BUCKET).getPublicUrl(storagePath);
+
+  // 現在のMVPでは、feed/profile 側が photos テーブルの image_url を読む前提になっている。
+  const { error: photoRecordError } = await supabase.from('photos').insert({
+    image_url: publicUrl,
+    profile_id: profileId,
+  });
+
+  if (photoRecordError) {
+    throw photoRecordError;
+  }
+
   return {
+    imageUrl: publicUrl,
     localUri: localPhotoUri,
     storagePath,
   } satisfies UploadedFailurePhoto;
