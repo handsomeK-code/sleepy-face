@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserServiceError, createProfile, getMyProfile } from '../user';
+import {
+  UserServiceError,
+  createProfile,
+  getMyProfile,
+  validateInitialSetupInput,
+} from '../user';
 
 const mocks = vi.hoisted(() => ({
   eq: vi.fn(),
@@ -185,6 +190,59 @@ describe('user service', () => {
       publicUserId: 'sleepy-user',
     }).catch((error: unknown) => {
       expectUserServiceError(error, 'unexpected_error');
+    });
+  });
+});
+
+describe('validateInitialSetupInput', () => {
+  it('normalizes public User ID and trims Display Name', () => {
+    expect(
+      validateInitialSetupInput({
+        displayName: ' Sleepy User ',
+        publicUserId: ' Sleepy-USER_01 ',
+      }),
+    ).toEqual({
+      isValid: true,
+      value: {
+        displayName: 'Sleepy User',
+        publicUserId: 'sleepy-user_01',
+      },
+    });
+  });
+
+  it('rejects public User IDs outside the allowed handle shape', () => {
+    expect(
+      validateInitialSetupInput({
+        displayName: 'Sleepy User',
+        publicUserId: 'sleepy user',
+      }),
+    ).toEqual({
+      code: 'public_user_id_invalid',
+      isValid: false,
+    });
+  });
+
+  it('rejects empty Display Name after trimming', () => {
+    expect(
+      validateInitialSetupInput({
+        displayName: '   ',
+        publicUserId: 'sleepy-user',
+      }),
+    ).toEqual({
+      code: 'display_name_required',
+      isValid: false,
+    });
+  });
+
+  it('rejects Display Names longer than thirty visible characters', () => {
+    expect(
+      validateInitialSetupInput({
+        displayName: 'あ'.repeat(31),
+        publicUserId: 'sleepy-user',
+      }),
+    ).toEqual({
+      code: 'display_name_too_long',
+      isValid: false,
     });
   });
 });
