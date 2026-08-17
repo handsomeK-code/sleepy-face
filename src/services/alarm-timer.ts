@@ -64,6 +64,26 @@ function runningStateToPublicState(
   };
 }
 
+function materializeAlarmTimerState(): AlarmTimerState | null {
+  if (!timerState) {
+    return cachePublicState(null);
+  }
+
+  let publicState: AlarmTimerState;
+
+  if (timerState.status === 'running') {
+    publicState = runningStateToPublicState(timerState);
+  } else {
+    publicState = timerState;
+  }
+
+  return cachePublicState(publicState);
+}
+
+export function getAlarmTimerSnapshot(): AlarmTimerState | null {
+  return lastPublicState;
+}
+
 function notifyListeners() {
   for (const listener of listeners) {
     listener();
@@ -76,7 +96,7 @@ function startListenerInterval() {
   }
 
   listenerInterval = setInterval(() => {
-    getAlarmTimerState();
+    materializeAlarmTimerState();
     notifyListeners();
   }, TICK_INTERVAL_MS);
 }
@@ -91,19 +111,7 @@ function stopListenerInterval() {
 }
 
 export function getAlarmTimerState(): AlarmTimerState | null {
-  if (!timerState) {
-    return cachePublicState(null);
-  }
-
-  let publicState: AlarmTimerState;
-
-  if (timerState.status === 'running') {
-    publicState = runningStateToPublicState(timerState);
-  } else {
-    publicState = timerState;
-  }
-
-  return cachePublicState(publicState);
+  return materializeAlarmTimerState();
 }
 
 export function startTimer(durationSeconds: number): void {
@@ -120,6 +128,7 @@ export function startTimer(durationSeconds: number): void {
           status: 'running',
         };
 
+  materializeAlarmTimerState();
   notifyListeners();
 }
 
@@ -135,6 +144,7 @@ export function pauseTimer(): void {
     status: 'paused',
   };
 
+  materializeAlarmTimerState();
   notifyListeners();
 }
 
@@ -156,6 +166,7 @@ export function resumeTimer(): void {
           status: 'running',
         };
 
+  materializeAlarmTimerState();
   notifyListeners();
 }
 
@@ -174,7 +185,7 @@ export function subscribeToAlarmTimer(
 export function useAlarmTimer(): AlarmTimerState | null {
   return useSyncExternalStore(
     subscribeToAlarmTimer,
-    getAlarmTimerState,
-    getAlarmTimerState,
+    getAlarmTimerSnapshot,
+    getAlarmTimerSnapshot,
   );
 }

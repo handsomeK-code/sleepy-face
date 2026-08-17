@@ -4,6 +4,7 @@ import type { AlarmTimerState } from '../alarm-timer';
 
 type AlarmTimerModule = {
   getAlarmTimerState: () => AlarmTimerState | null;
+  getAlarmTimerSnapshot: () => AlarmTimerState | null;
   pauseTimer: () => void;
   resumeTimer: () => void;
   startTimer: (durationSeconds: number) => void;
@@ -144,5 +145,19 @@ describe('Alarm Timer service', () => {
     });
 
     unsubscribe();
+  });
+
+  it('keeps hook snapshots stable between timer notifications', () => {
+    alarmTimer.startTimer(10);
+    const firstSnapshot = alarmTimer.getAlarmTimerSnapshot();
+
+    vi.advanceTimersByTime(50);
+
+    expect(alarmTimer.getAlarmTimerSnapshot()).toBe(firstSnapshot);
+
+    vi.advanceTimersByTime(50);
+    alarmTimer.getAlarmTimerState();
+
+    expect(alarmTimer.getAlarmTimerSnapshot()).not.toBe(firstSnapshot);
   });
 });
