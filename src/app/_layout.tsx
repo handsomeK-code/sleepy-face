@@ -5,7 +5,11 @@ import { getCurrentUserId } from '@/services/auth';
 import { getMyProfile } from '@/services/user';
 
 const DEV_INDEX_ROUTE = '/';
-const DEV_TEST_ROUTES = new Set(['/timer-test']);
+const DEV_TEST_ROUTES = new Set([
+  '/alarm-ring-test',
+  '/ringing',
+  '/timer-test',
+]);
 const AUTH_ROUTES = new Set(['/signin', '/signup']);
 
 function isAuthRoute(pathname: string): boolean {
