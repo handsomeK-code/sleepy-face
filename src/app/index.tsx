@@ -13,6 +13,7 @@ const screens = [
   { href: '/signin', label: 'サインイン画面' },
   { href: '/signup', label: '新規登録画面' },
   { href: '/profile-setup', label: 'プロフィール設定画面' },
+  { href: '/timer-test', label: 'タイマーテスト画面' },
   { href: '/home', label: 'ホーム画面' },
   { href: '/add-friend', label: '友達追加画面' },
   { href: '/alarms', label: 'アラーム一覧画面' },
