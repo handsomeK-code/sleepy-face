@@ -1,7 +1,7 @@
 import {
   FailurePhotoUploadError,
   type FailurePhotoUploadErrorCode,
-  type PhotoRecord,
+  type UploadedFailurePhoto,
   uploadFailurePhoto,
 } from './wakeChallenge';
 
@@ -28,18 +28,19 @@ export type QuizState =
       lastAnswerCorrect: boolean;
     };
 
-export type QuizFailurePhotoRecord = {
-  imageUrl: string;
-  localUri: string;
-  photoRecord: PhotoRecord;
-  storagePath: string;
-};
+export type QuizFailurePhotoRecord = UploadedFailurePhoto;
 
 export type QuizServiceErrorCode =
-  'quiz_not_started' | FailurePhotoUploadErrorCode | 'unexpected_error';
+  | 'quiz_not_started'
+  | 'quiz_already_completed'
+  | FailurePhotoUploadErrorCode
+  | 'unexpected_error';
 
 type QuizQuestion = PublicQuizQuestion & {
   answer: number;
+  leftOperand: number;
+  operator: '+' | '-';
+  rightOperand: number;
 };
 
 type ActiveQuizSession = {
@@ -98,8 +99,45 @@ function generateQuizQuestion(
   return {
     answer,
     id: `quiz-question-${attemptNumber}`,
+    leftOperand,
+    operator,
     prompt: `${leftOperand} ${operator} ${rightOperand}`,
+    rightOperand,
   };
+}
+
+function flipRepeatedQuizQuestion(
+  attemptNumber: number,
+  previousQuestion: QuizQuestion,
+): QuizQuestion {
+  const operator = previousQuestion.operator === '+' ? '-' : '+';
+  const answer =
+    operator === '+'
+      ? previousQuestion.leftOperand + previousQuestion.rightOperand
+      : previousQuestion.leftOperand - previousQuestion.rightOperand;
+
+  return {
+    answer,
+    id: `quiz-question-${attemptNumber}`,
+    leftOperand: previousQuestion.leftOperand,
+    operator,
+    prompt: `${previousQuestion.leftOperand} ${operator} ${previousQuestion.rightOperand}`,
+    rightOperand: previousQuestion.rightOperand,
+  };
+}
+
+function generateReplacementQuizQuestion(
+  attemptNumber: number,
+  previousQuestion: QuizQuestion,
+  random: () => number,
+): QuizQuestion {
+  const nextQuestion = generateQuizQuestion(attemptNumber, random);
+
+  if (nextQuestion.prompt !== previousQuestion.prompt) {
+    return nextQuestion;
+  }
+
+  return flipRepeatedQuizQuestion(attemptNumber, previousQuestion);
 }
 
 function toPublicQuizState(session: QuizSession): QuizState {
@@ -187,7 +225,10 @@ export function submitQuizAnswer(answerText: string): QuizState {
   }
 
   if (quizSession.status === 'completed') {
-    return toPublicQuizState(quizSession);
+    throw new QuizServiceError(
+      'quiz_already_completed',
+      'Quiz answer submission cannot continue after Quiz Completion.',
+    );
   }
 
   const parsedAnswer = parseAnswerText(answerText);
@@ -212,7 +253,11 @@ export function submitQuizAnswer(answerText: string): QuizState {
     attemptNumber: nextAttemptNumber,
     correctAnswerCount,
     lastAnswerCorrect: isCorrect,
-    question: generateQuizQuestion(nextAttemptNumber, quizSession.random),
+    question: generateReplacementQuizQuestion(
+      nextAttemptNumber,
+      quizSession.question,
+      quizSession.random,
+    ),
     random: quizSession.random,
     status: 'active',
   };

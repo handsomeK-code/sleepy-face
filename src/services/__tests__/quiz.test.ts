@@ -191,6 +191,21 @@ describe('Quiz Question service', () => {
     });
   });
 
+  it('does not repeat the same prompt when replacing a wrong-answer question', () => {
+    quizService.startQuiz({ random: sequenceRandom([0, 0, 0, 0, 0, 0]) });
+
+    expect(quizService.submitQuizAnswer('19')).toMatchObject({
+      attemptNumber: 2,
+      correctAnswerCount: 0,
+      lastAnswerCorrect: false,
+      question: {
+        id: 'quiz-question-2',
+        prompt: '10 - 10',
+      },
+      status: 'active',
+    });
+  });
+
   it('completes after three correct answers', () => {
     quizService.startQuiz({
       random: sequenceRandom([0, 0, 0, 0.1, 0.2, 0, 0.3, 0.4, 0]),
@@ -209,9 +224,47 @@ describe('Quiz Question service', () => {
     });
   });
 
+  it('throws a typed error when submitting after Quiz Completion', () => {
+    quizService.startQuiz({
+      random: sequenceRandom([0, 0, 0, 0.1, 0.2, 0, 0.3, 0.4, 0]),
+    });
+    quizService.submitQuizAnswer('20');
+    quizService.submitQuizAnswer('47');
+    quizService.submitQuizAnswer('83');
+
+    try {
+      quizService.submitQuizAnswer('1');
+    } catch (error) {
+      expectQuizServiceError(error, 'quiz_already_completed');
+    }
+  });
+
   it('replaces any previous quiz when starting again', () => {
     quizService.startQuiz({ random: sequenceRandom([0, 0, 0]) });
     quizService.submitQuizAnswer('20');
+
+    expect(
+      quizService.startQuiz({ random: sequenceRandom([0.5, 0.2, 0]) }),
+    ).toEqual({
+      attemptNumber: 1,
+      correctAnswerCount: 0,
+      lastAnswerCorrect: null,
+      question: {
+        id: 'quiz-question-1',
+        prompt: '55 + 28',
+      },
+      requiredCorrectAnswerCount: 3,
+      status: 'active',
+    });
+  });
+
+  it('replaces a completed quiz when starting again', () => {
+    quizService.startQuiz({
+      random: sequenceRandom([0, 0, 0, 0.1, 0.2, 0, 0.3, 0.4, 0]),
+    });
+    quizService.submitQuizAnswer('20');
+    quizService.submitQuizAnswer('47');
+    quizService.submitQuizAnswer('83');
 
     expect(
       quizService.startQuiz({ random: sequenceRandom([0.5, 0.2, 0]) }),

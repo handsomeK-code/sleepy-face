@@ -213,7 +213,8 @@ Rules:
 - Quiz Attempt Number advances after every submitted answer, whether correct or wrong.
 - `submitQuizAnswer` accepts string input, trims whitespace, and treats non-integer text as an incorrect answer.
 - Quiz Completion happens after three correct answers.
-- Wrong answers produce a replacement Quiz Question and do not cause immediate Quiz Failure.
+- Wrong answers produce a replacement Quiz Question with a different prompt and do not cause immediate Quiz Failure.
+- Submitting before Quiz start or after Quiz Completion throws a typed quiz service error.
 - The service does not own Alarm Timer expiration or Challenge Success/Challenge Failure navigation.
 - `recordQuizFailurePhoto` uses the current Photo API path and returns a current-schema quiz-failure photo record, not a final Failure Card row.
 

@@ -10,7 +10,7 @@ type SavedFailurePhoto = {
   savedAt: string;
 };
 
-type UploadedFailurePhoto = {
+export type UploadedFailurePhoto = {
   imageUrl: string;
   localUri: string;
   photoRecord: PhotoRecord;
@@ -62,7 +62,7 @@ async function ensureFailurePhotoDirectory() {
     throw new Error('ローカル保存先が見つかりません。');
   }
 
-  // 撮影した写真をアプリ内に残すためのフォルダを用意する。
+  // Keep captured photos in app-owned storage for later upload.
   const directory = await FileSystem.getInfoAsync(FAILURE_PHOTO_DIR);
 
   if (!directory.exists) {
@@ -75,11 +75,11 @@ async function ensureFailurePhotoDirectory() {
 export async function saveFailurePhotoLocally(photoUri: string) {
   await ensureFailurePhotoDirectory();
 
-  // 写真ごとに別ファイル名へ保存すると、Android側の画像キャッシュや上書きズレを避けられる。
+  // A unique file per photo avoids Android image-cache and overwrite drift.
   const savedAt = new Date().toISOString();
   const localPhotoPath = `${FAILURE_PHOTO_DIR}failure-photo-${Date.now()}.jpg`;
 
-  // Cameraの一時ファイルを、あとから取得できるdocumentDirectoryへコピーする。
+  // Copy the camera temp file into documentDirectory so it can be read later.
   await FileSystem.copyAsync({
     from: photoUri,
     to: localPhotoPath,
@@ -131,7 +131,7 @@ export async function uploadFailurePhoto(localPhotoUri: string) {
 
   const profileId = userResult.data.user.id;
 
-  // ユーザーIDと日時でファイルを分けると、他ユーザーの写真や再撮影分と衝突しにくい。
+  // Scope by Auth User ID and timestamp to avoid cross-user or retake collisions.
   const storagePath = `${profileId}/${Date.now()}.jpg`;
   const photoResponse = await fetch(localPhotoUri);
   const photoBody = await photoResponse.arrayBuffer();
@@ -155,7 +155,7 @@ export async function uploadFailurePhoto(localPhotoUri: string) {
     data: { publicUrl },
   } = supabase.storage.from(FAILURE_PHOTO_BUCKET).getPublicUrl(storagePath);
 
-  // 現在のMVPでは、feed/profile 側が photos テーブルの image_url を読む前提になっている。
+  // Current-schema feed/profile reads consume photos.image_url.
   const { data: photoRecord, error: photoRecordError } = await supabase
     .from('photos')
     .insert({
