@@ -66,10 +66,11 @@ These are required by the product/API docs but are not currently installed in `p
 | --- | --- |
 | Camera library, likely `expo-camera` | Photo Capture during Wake Up Challenge |
 | Face detection library, likely ML Kit through a React Native package | Face Verification on device |
-| Local notification/alarm scheduling capability | Ring scheduled alarms on device |
 | Network status detection capability | Universal Offline Page and active-offline failure handling |
 
-Exact package choices for camera, face detection, local alarm scheduling, and network detection still need implementation validation against Expo 57 compatibility.
+Exact package choices for camera, face detection, and network detection still need implementation validation against Expo 57 compatibility.
+
+Android Alarm Mechanics use a local Expo native module in Kotlin for Android-only exact alarm scheduling, default alarm tone playback, full-screen notification launch, and test ringing controls. This requires a rebuilt native Android app and is not supported in Expo Go.
 
 ## Backend Platform
 

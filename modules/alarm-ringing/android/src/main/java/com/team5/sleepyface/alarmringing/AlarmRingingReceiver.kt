@@ -1,0 +1,25 @@
+package com.team5.sleepyface.alarmringing
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import androidx.core.content.ContextCompat
+
+class AlarmRingingReceiver : BroadcastReceiver() {
+  override fun onReceive(context: Context, intent: Intent) {
+    if (intent.action != ACTION_FIRE_TEST_ALARM) {
+      return
+    }
+
+    val alarmId = intent.getStringExtra(EXTRA_ALARM_ID) ?: return
+    val scheduledFor = intent.getStringExtra(EXTRA_SCHEDULED_FOR) ?: return
+
+    val serviceIntent = Intent(context, AlarmRingingService::class.java).apply {
+      action = ACTION_FIRE_TEST_ALARM
+      putExtra(EXTRA_ALARM_ID, alarmId)
+      putExtra(EXTRA_SCHEDULED_FOR, scheduledFor)
+    }
+
+    ContextCompat.startForegroundService(context, serviceIntent)
+  }
+}
