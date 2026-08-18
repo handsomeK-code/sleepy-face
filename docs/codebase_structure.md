@@ -73,12 +73,12 @@ Screen responsibilities:
 | `login.tsx` | Google Login screen using Supabase Auth. |
 | `profile-setup.tsx` | First-time profile setup for public User ID and Display Name. |
 | `home.tsx` | Main app entry after Initial Setup. Alarm is the default Home area. |
-| `add-friend.tsx` | Search by public User ID or Display Name and add a mutual Friend. |
-| `alarms.tsx` | List Saved Alarms and navigate to create/edit flows. |
+| `add-friend.tsx` | Search by public User ID or Display Name, list existing Friends, and add a mutual Friend. |
+| `alarms.tsx` | List Saved Alarms, show time/repeat/ON-OFF state, toggle local ON/OFF state, and navigate to create/edit flows. |
 | `add-alarm.tsx` | Create a new Saved Alarm with time and selected weekdays. |
 | `edit-alarm.tsx` | Edit or delete an existing Saved Alarm. |
 | `ringing.tsx` | Show the active ringing alarm and start the Wake Up Challenge. |
-| `face-check.tsx` | Capture a selfie and run Face Verification. |
+| `face-check.tsx` | Capture a selfie, save the latest captured photo locally, and upload it as a simple failure photo record. Face Verification logic is still a later slice. |
 | `face-check-success.tsx` | Show Face Verification success and proceed to Quiz. |
 | `face-check-failure.tsx` | Show Face Verification failure and return to retake flow. |
 | `quiz.tsx` | Ask arithmetic Quiz Questions and track correct answers and timer state. |
@@ -107,11 +107,11 @@ Service responsibilities:
 
 | file | responsibility |
 | --- | --- |
-| `alarm.ts` | Saved Alarm create/list/update/delete, next alarm calculation, local scheduling, and native alarm module calls. |
+| `alarm.ts` | Saved Alarm create/list/update/delete, ON/OFF toggle persistence, next alarm calculation, local scheduling, and native alarm module calls. |
 | `auth.ts` | Supabase OAuth-only Google Login, browser auth-session lifecycle, Auth User ID lookup, and auth-state subscription. |
 | `user.ts` | Initial Setup Profile lookup and Profile creation with public User ID and Display Name. |
 | `friend.ts` | Profile search, add Friend, and list Friends. |
-| `wakeChallenge.ts` | Daily Alarm Attempt start/completion, Challenge Failure recording, Failure Card creation, and Failure Photo upload. |
+| `wakeChallenge.ts` | Captured-photo local persistence, latest local photo lookup, Supabase Storage upload, and simple `photos` record creation. Daily Alarm Attempt and final Failure Card creation are later slices. |
 
 ## `src/lib/`
 
@@ -226,7 +226,7 @@ The initial sketch included several items that do not match the current MVP scop
 | initial sketch item | current MVP direction |
 | --- | --- |
 | `signin.tsx` and `signup.tsx` for email auth | Use `login.tsx` for Google Login through Supabase Auth. Email/password auth is out of scope. |
-| Alarm ON/OFF behavior | Out of scope. Saved Alarms do not have enable/disable state in the MVP. |
+| Alarm ON/OFF behavior | Implemented for Saved Alarms as local `isEnabled` state. |
 | Logout in `auth.ts` | Out of scope for MVP docs. Add only if the product scope changes. |
 | Home showing "sleeping face" wording | Use Friends Feed and Failure Card terminology. |
-| Generic photo publishing | Only Quiz Failure creates a Failure Card through the backend RPC. |
+| Generic photo publishing | Current camera flow uploads simple captured-photo records. Final Failure Card publishing remains tied to Quiz Failure in a later backend slice. |

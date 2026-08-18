@@ -4,7 +4,7 @@
 
 This document defines the current frontend/backend contract for Supabase Auth, app tables, and RPC functions.
 
-The current backend contract covers Google Login, Initial Setup Profile creation, simple photo records, and friend relations. Wake Up Challenge attempt persistence, Failure Cards, and Friends Feed Access are deferred.
+The current backend contract covers Google Login, Initial Setup Profile creation, simple photo records, failure photo Storage upload, and friend relations. Wake Up Challenge attempt persistence, final Failure Card tables, and Friends Feed Access are deferred.
 
 ## Overall Rules
 
@@ -193,6 +193,34 @@ Data:
 
 ## Photo API
 
+### Upload Failure Photo
+
+Supabase features:
+
+- Storage upload
+- Public Storage URL lookup
+- Postgres table insert
+
+Frontend behavior:
+
+1. Copy the captured camera photo into app local storage.
+2. Upload the local file to the `failure-photos` Storage bucket under a current-user path.
+3. Read the public URL for the uploaded object.
+4. Insert a simple `photos` row for the current user.
+
+Current frontend service:
+
+```ts
+uploadFailurePhoto(localPhotoUri: string);
+```
+
+Rules:
+
+- The caller must be authenticated.
+- The uploaded Storage path is scoped under the Auth User ID.
+- The `photos.image_url` value is the public URL returned for the Storage object.
+- This is the current simple photo record flow, not the final Failure Card persistence model.
+
 ### List My Photos
 
 Supabase feature:
@@ -234,6 +262,31 @@ Rules:
 - Current policies allow users to insert only their own photo records.
 
 ## Friend Relation API
+
+### Search Profiles
+
+Supabase feature:
+
+- Postgres table select
+
+Frontend behavior:
+
+- Search Profiles by public User ID or Display Name.
+- Exclude the current user's own Profile from results.
+- Return public profile fields needed by the add-friend screen.
+
+Current frontend service:
+
+```ts
+searchProfiles(query: string);
+```
+
+Rules:
+
+- Users search by public User ID or Display Name.
+- Public User ID search is prefix-oriented.
+- Display Name search is partial-match-oriented.
+- Current policies allow authenticated users to read Profiles for Friend Search.
 
 ### List My Friend Relations
 

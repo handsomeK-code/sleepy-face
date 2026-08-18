@@ -17,7 +17,8 @@ The current online Supabase setup is intentionally smaller than the full product
 - Keep `icon_url` as an optional profile image field, even though profile icons are not required in the MVP UI.
 - Use simple `photos` records for uploaded image URLs in the current schema.
 - Use `friends_relations` for directional friend relation rows in the current schema.
-- Defer `daily_attempts`, `failure_cards`, canonical `friendships`, feed access persistence, and Failure Card-specific storage rules until the Wake Up Challenge backend is implemented.
+- Use Supabase Storage bucket `failure-photos` for the current simple captured-photo upload flow.
+- Defer `daily_attempts`, `failure_cards`, canonical `friendships`, feed access persistence, and final Failure Card-specific storage rules until the Wake Up Challenge backend is implemented.
 
 ## Tables
 
@@ -56,6 +57,16 @@ Rules:
 
 - Users can read and insert only their own photo records in the current policy set.
 - This table is not yet the final Failure Card model.
+
+### failure-photos Storage
+
+Storage bucket used by the current camera upload flow.
+
+Rules:
+
+- Captured photos are uploaded under a path scoped by the current Auth User ID.
+- The app stores the public URL in `photos.image_url`.
+- This bucket supports the current simple photo records and is not yet the final Failure Card storage model.
 
 ### friends_relations
 
