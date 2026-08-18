@@ -132,6 +132,35 @@ export function startTimer(durationSeconds: number): void {
   notifyListeners();
 }
 
+export function startTimerFromStartedAt(
+  durationSeconds: number,
+  startedAt: string | Date,
+): void {
+  const startedAtMs =
+    startedAt instanceof Date ? startedAt.getTime() : Date.parse(startedAt);
+
+  if (!Number.isFinite(startedAtMs)) {
+    startTimer(durationSeconds);
+    return;
+  }
+
+  const remainingMs = durationSeconds * 1000 - (Date.now() - startedAtMs);
+
+  timerState =
+    remainingMs <= 0
+      ? {
+          remainingMs: 0,
+          status: 'expired',
+        }
+      : {
+          expiresAt: Date.now() + remainingMs,
+          status: 'running',
+        };
+
+  materializeAlarmTimerState();
+  notifyListeners();
+}
+
 export function pauseTimer(): void {
   const currentState = getAlarmTimerState();
 

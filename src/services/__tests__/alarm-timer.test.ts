@@ -8,6 +8,10 @@ type AlarmTimerModule = {
   pauseTimer: () => void;
   resumeTimer: () => void;
   startTimer: (durationSeconds: number) => void;
+  startTimerFromStartedAt: (
+    durationSeconds: number,
+    startedAt: string | Date,
+  ) => void;
   subscribeToAlarmTimer: (listener: () => void) => () => void;
 };
 
@@ -31,6 +35,28 @@ describe('Alarm Timer service', () => {
     expect(alarmTimer.getAlarmTimerState()).toEqual({
       remainingMs: 10_000,
       status: 'running',
+    });
+  });
+
+  it('starts a running Alarm Timer from when the alarm went off', () => {
+    vi.setSystemTime(new Date('2026-08-17T07:02:15.000Z'));
+
+    alarmTimer.startTimerFromStartedAt(180, '2026-08-17T07:00:00.000Z');
+
+    expect(alarmTimer.getAlarmTimerState()).toEqual({
+      remainingMs: 45_000,
+      status: 'running',
+    });
+  });
+
+  it('expires when starting from an alarm fire time older than the duration', () => {
+    vi.setSystemTime(new Date('2026-08-17T07:04:00.000Z'));
+
+    alarmTimer.startTimerFromStartedAt(180, '2026-08-17T07:00:00.000Z');
+
+    expect(alarmTimer.getAlarmTimerState()).toEqual({
+      remainingMs: 0,
+      status: 'expired',
     });
   });
 
