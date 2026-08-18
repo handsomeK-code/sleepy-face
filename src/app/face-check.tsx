@@ -11,21 +11,30 @@ import {
 } from 'react-native';
 
 import {
+  deleteFailurePhotoLocally,
   getLatestFailurePhoto,
   saveFailurePhotoLocally,
   uploadFailurePhoto as uploadFailurePhotoToStorage,
 } from '@/services/wakeChallenge';
+import {
+  checkFaceProof,
+  shouldRetainFaceProofPhoto,
+  type FaceProofResult,
+} from '@/services/face-proof';
 
 export default function FaceCheckScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [localPhotoUri, setLocalPhotoUri] = useState<string | null>(null);
+  const [faceProofResult, setFaceProofResult] =
+    useState<FaceProofResult | null>(null);
   const [uploadedPath, setUploadedPath] = useState<string | null>(null);
   const [message, setMessage] = useState('ボタンを押すとカメラが起動します。');
   const [isBusy, setIsBusy] = useState(false);
 
   async function openCamera() {
+    setFaceProofResult(null);
     setUploadedPath(null);
 
     if (!permission?.granted) {
@@ -55,10 +64,26 @@ export default function FaceCheckScreen() {
       });
 
       const savedPhoto = await saveFailurePhotoLocally(photo.uri);
+      const nextFaceProofResult = await checkFaceProof(savedPhoto.uri);
 
-      setLocalPhotoUri(savedPhoto.uri);
       setIsCameraOpen(false);
-      setMessage('写真をローカル保存しました。');
+      setFaceProofResult(nextFaceProofResult);
+
+      if (shouldRetainFaceProofPhoto(nextFaceProofResult)) {
+        setLocalPhotoUri(savedPhoto.uri);
+        setMessage(`顔を検出しました（${nextFaceProofResult.faceCount}件）。`);
+        return;
+      }
+
+      await deleteFailurePhotoLocally(savedPhoto.uri);
+      setLocalPhotoUri(null);
+
+      if (nextFaceProofResult.reason === 'no-face-detected') {
+        setMessage('顔が検出できませんでした。もう一度撮影してください。');
+        return;
+      }
+
+      setMessage(getFaceProofFailureMessage(nextFaceProofResult.reason));
     } catch (error) {
       setMessage(getErrorMessage(error));
     } finally {
@@ -67,6 +92,7 @@ export default function FaceCheckScreen() {
   }
 
   async function loadLocalPhoto() {
+    setFaceProofResult(null);
     setUploadedPath(null);
     setIsBusy(true);
 
@@ -77,6 +103,7 @@ export default function FaceCheckScreen() {
       if (!photo) {
         setMessage('ローカル保存された写真がありません。');
         setLocalPhotoUri(null);
+        setFaceProofResult(null);
         return;
       }
 
@@ -170,6 +197,15 @@ export default function FaceCheckScreen() {
           )}
         </View>
 
+        {faceProofResult && (
+          <View style={styles.resultBox}>
+            <Text style={styles.resultLabel}>顔判定</Text>
+            <Text style={styles.resultText}>
+              {getFaceProofResultText(faceProofResult)}
+            </Text>
+          </View>
+        )}
+
         {uploadedPath && (
           <View style={styles.resultBox}>
             <Text style={styles.resultLabel}>Storage path</Text>
@@ -245,6 +281,33 @@ function getErrorMessage(error: unknown) {
   }
 
   return '処理に失敗しました。';
+}
+
+function getFaceProofFailureMessage(
+  reason: Exclude<FaceProofResult, { status: 'passed' }>['reason'],
+) {
+  switch (reason) {
+    case 'detector-error':
+      return '顔判定に失敗しました。もう一度試してください。';
+    case 'invalid-photo':
+      return '写真を読み取れませんでした。もう一度撮影してください。';
+    case 'no-face-detected':
+      return '顔が検出できませんでした。もう一度撮影してください。';
+    case 'unsupported-platform':
+      return 'この端末では顔判定を利用できません。';
+  }
+}
+
+function getFaceProofResultText(result: FaceProofResult) {
+  if (result.status === 'passed') {
+    return `成功: ${result.faceCount}件の顔を検出しました。`;
+  }
+
+  if (result.reason === 'no-face-detected') {
+    return '失敗: 顔が検出できませんでした。';
+  }
+
+  return `失敗: ${getFaceProofFailureMessage(result.reason)}`;
 }
 
 const styles = StyleSheet.create({
