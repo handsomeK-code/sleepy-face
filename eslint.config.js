@@ -7,6 +7,7 @@ module.exports = defineConfig([
   expoConfig,
   {
     settings: {
+      'import/core-modules': ['expo-camera'],
       'import/resolver': {
         node: true,
         typescript: true,
