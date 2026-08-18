@@ -5,5 +5,13 @@ const eslintPluginPrettierRecommended = require('eslint-plugin-prettier/recommen
 module.exports = defineConfig([
   globalIgnores(['dist/*']),
   expoConfig,
+  {
+    settings: {
+      'import/resolver': {
+        node: true,
+        typescript: true,
+      },
+    },
+  },
   eslintPluginPrettierRecommended,
 ]);
