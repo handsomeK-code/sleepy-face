@@ -83,7 +83,7 @@ The MVP backend is Supabase:
 - Supabase Row Level Security for user data access
 - Supabase RPC functions for shared business rules, starting with Profile creation
 
-The current app can upload captured failure photos to Supabase Storage and insert simple `photos` records. Wake Up Challenge attempt persistence, final Failure Card tables, final Failure Card-specific Storage policy design, and Friends Feed Access persistence are deferred backend work.
+The current app can upload captured failure photos to Supabase Storage and insert simple `photos` records. The Quiz Question service is client-side service logic for generating two-digit arithmetic questions, checking string answers, and recording current-schema quiz-failure photo records. Wake Up Challenge attempt persistence, final Failure Card tables, final Failure Card-specific Storage policy design, and Friends Feed Access persistence are deferred backend work.
 
 The frontend should use the Supabase client directly for simple Auth and reads. It should use RPC functions when the backend must enforce consistent rules.
 

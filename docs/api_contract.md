@@ -193,6 +193,31 @@ Data:
 
 ## Photo API
 
+### Quiz Question Service
+
+Frontend service:
+
+```ts
+startQuiz();
+getQuizState();
+submitQuizAnswer(answerText: string);
+recordQuizFailurePhoto(localPhotoUri: string);
+```
+
+Rules:
+
+- The service is client-side and owns one active Quiz session at a time.
+- Quiz Questions are two-digit addition or subtraction problems.
+- Public Quiz Questions include an ID and prompt, but do not expose the answer.
+- Quiz Progress counts correct answers only.
+- Quiz Attempt Number advances after every submitted answer, whether correct or wrong.
+- `submitQuizAnswer` accepts string input, trims whitespace, and treats non-integer text as an incorrect answer.
+- Quiz Completion happens after three correct answers.
+- Wrong answers produce a replacement Quiz Question with a different prompt and do not cause immediate Quiz Failure.
+- Submitting before Quiz start or after Quiz Completion throws a typed quiz service error.
+- The service does not own Alarm Timer expiration or Challenge Success/Challenge Failure navigation.
+- `recordQuizFailurePhoto` uses the current Photo API path and returns a current-schema quiz-failure photo record, not a final Failure Card row.
+
 ### Upload Failure Photo
 
 Supabase features:
@@ -219,6 +244,7 @@ Rules:
 - The caller must be authenticated.
 - The uploaded Storage path is scoped under the Auth User ID.
 - The `photos.image_url` value is the public URL returned for the Storage object.
+- The service returns the inserted `photos` row mapped as photo-record data.
 - This is the current simple photo record flow, not the final Failure Card persistence model.
 
 ### List My Photos
