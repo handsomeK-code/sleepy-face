@@ -1,3 +1,10 @@
+import {
+  FailurePhotoUploadError,
+  type FailurePhotoUploadErrorCode,
+  type PhotoRecord,
+  uploadFailurePhoto,
+} from './wakeChallenge';
+
 export type PublicQuizQuestion = {
   id: string;
   prompt: string;
@@ -21,7 +28,15 @@ export type QuizState =
       lastAnswerCorrect: boolean;
     };
 
-export type QuizServiceErrorCode = 'quiz_not_started';
+export type QuizFailurePhotoRecord = {
+  imageUrl: string;
+  localUri: string;
+  photoRecord: PhotoRecord;
+  storagePath: string;
+};
+
+export type QuizServiceErrorCode =
+  'quiz_not_started' | FailurePhotoUploadErrorCode | 'unexpected_error';
 
 type QuizQuestion = PublicQuizQuestion & {
   answer: number;
@@ -128,6 +143,22 @@ function parseAnswerText(answerText: string): number | null {
   return answer;
 }
 
+function toQuizServiceError(error: unknown): QuizServiceError {
+  if (error instanceof QuizServiceError) {
+    return error;
+  }
+
+  if (error instanceof FailurePhotoUploadError) {
+    return new QuizServiceError(error.code, error.message, error);
+  }
+
+  return new QuizServiceError(
+    'unexpected_error',
+    'Quiz service operation failed unexpectedly.',
+    error,
+  );
+}
+
 export function startQuiz(options: StartQuizOptions = {}): QuizState {
   const random = options.random ?? Math.random;
 
@@ -187,4 +218,14 @@ export function submitQuizAnswer(answerText: string): QuizState {
   };
 
   return toPublicQuizState(quizSession);
+}
+
+export async function recordQuizFailurePhoto(
+  localPhotoUri: string,
+): Promise<QuizFailurePhotoRecord> {
+  try {
+    return await uploadFailurePhoto(localPhotoUri);
+  } catch (error) {
+    throw toQuizServiceError(error);
+  }
 }

@@ -9,6 +9,37 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const mocks = vi.hoisted(() => ({
+  arrayBuffer: vi.fn(),
+  dbFrom: vi.fn(),
+  fetch: vi.fn(),
+  getInfoAsync: vi.fn(),
+  getPublicUrl: vi.fn(),
+  getUser: vi.fn(),
+  insert: vi.fn(),
+  select: vi.fn(),
+  single: vi.fn(),
+  storageFrom: vi.fn(),
+  upload: vi.fn(),
+}));
+
+vi.mock('expo-file-system/legacy', () => ({
+  documentDirectory: 'file:///document/',
+  getInfoAsync: mocks.getInfoAsync,
+}));
+
+vi.mock('@/lib/supabase', () => ({
+  supabase: {
+    auth: {
+      getUser: mocks.getUser,
+    },
+    from: mocks.dbFrom,
+    storage: {
+      from: mocks.storageFrom,
+    },
+  },
+}));
+
 function sequenceRandom(values: number[]) {
   let index = 0;
 
@@ -28,6 +59,38 @@ function expectQuizServiceError(
   expect(
     (error as InstanceType<QuizServiceModule['QuizServiceError']>).code,
   ).toBe(code);
+}
+
+function setupSuccessfulPhotoRecording() {
+  mocks.getInfoAsync.mockResolvedValue({ exists: true });
+  mocks.getUser.mockResolvedValue({
+    data: { user: { id: 'auth-user-id' } },
+    error: null,
+  });
+  mocks.fetch.mockResolvedValue({ arrayBuffer: mocks.arrayBuffer });
+  mocks.arrayBuffer.mockResolvedValue(new ArrayBuffer(3));
+  mocks.storageFrom.mockReturnValue({
+    getPublicUrl: mocks.getPublicUrl,
+    upload: mocks.upload,
+  });
+  mocks.upload.mockResolvedValue({ error: null });
+  mocks.getPublicUrl.mockReturnValue({
+    data: {
+      publicUrl: 'https://storage.example/failure-photo.jpg',
+    },
+  });
+  mocks.dbFrom.mockReturnValue({ insert: mocks.insert });
+  mocks.insert.mockReturnValue({ select: mocks.select });
+  mocks.select.mockReturnValue({ single: mocks.single });
+  mocks.single.mockResolvedValue({
+    data: {
+      created_at: '2026-08-18T00:00:00.000Z',
+      id: 'photo-id',
+      image_url: 'https://storage.example/failure-photo.jpg',
+      profile_id: 'auth-user-id',
+    },
+    error: null,
+  });
 }
 
 describe('Quiz Question service', () => {
@@ -173,5 +236,98 @@ describe('Quiz Question service', () => {
         prompt: '10 - 10',
       },
     });
+  });
+});
+
+describe('recordQuizFailurePhoto', () => {
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', mocks.fetch);
+    vi.setSystemTime(new Date('2026-08-18T00:00:00.000Z'));
+    quizService = await import('../quiz');
+  });
+
+  it('records a quiz-failure photo against the current schema', async () => {
+    setupSuccessfulPhotoRecording();
+
+    await expect(
+      quizService.recordQuizFailurePhoto('file:///document/failure-photo.jpg'),
+    ).resolves.toEqual({
+      imageUrl: 'https://storage.example/failure-photo.jpg',
+      localUri: 'file:///document/failure-photo.jpg',
+      photoRecord: {
+        createdAt: '2026-08-18T00:00:00.000Z',
+        id: 'photo-id',
+        imageUrl: 'https://storage.example/failure-photo.jpg',
+        profileId: 'auth-user-id',
+      },
+      storagePath: 'auth-user-id/1787011200000.jpg',
+    });
+    expect(mocks.storageFrom).toHaveBeenCalledWith('failure-photos');
+    expect(mocks.upload).toHaveBeenCalledWith(
+      'auth-user-id/1787011200000.jpg',
+      expect.any(ArrayBuffer),
+      {
+        contentType: 'image/jpeg',
+        upsert: false,
+      },
+    );
+    expect(mocks.dbFrom).toHaveBeenCalledWith('photos');
+    expect(mocks.insert).toHaveBeenCalledWith({
+      image_url: 'https://storage.example/failure-photo.jpg',
+      profile_id: 'auth-user-id',
+    });
+  });
+
+  it('throws a typed error when the local photo is missing', async () => {
+    mocks.getInfoAsync.mockResolvedValue({ exists: false });
+
+    await quizService
+      .recordQuizFailurePhoto('file:///missing.jpg')
+      .catch((error: unknown) => {
+        expectQuizServiceError(error, 'local_photo_missing');
+      });
+    expect(mocks.storageFrom).not.toHaveBeenCalled();
+  });
+
+  it('throws a typed error when the user is not authenticated', async () => {
+    mocks.getInfoAsync.mockResolvedValue({ exists: true });
+    mocks.getUser.mockResolvedValue({
+      data: { user: null },
+      error: new Error('not authenticated'),
+    });
+
+    await quizService
+      .recordQuizFailurePhoto('file:///document/failure-photo.jpg')
+      .catch((error: unknown) => {
+        expectQuizServiceError(error, 'not_authenticated');
+      });
+  });
+
+  it('throws a typed error when Storage upload fails', async () => {
+    setupSuccessfulPhotoRecording();
+    mocks.upload.mockResolvedValue({ error: new Error('storage failed') });
+
+    await quizService
+      .recordQuizFailurePhoto('file:///document/failure-photo.jpg')
+      .catch((error: unknown) => {
+        expectQuizServiceError(error, 'storage_upload_failed');
+      });
+  });
+
+  it('throws a typed error when photo record insert fails', async () => {
+    setupSuccessfulPhotoRecording();
+    mocks.single.mockResolvedValue({
+      data: null,
+      error: new Error('insert failed'),
+    });
+
+    await quizService
+      .recordQuizFailurePhoto('file:///document/failure-photo.jpg')
+      .catch((error: unknown) => {
+        expectQuizServiceError(error, 'photo_record_insert_failed');
+      });
   });
 });

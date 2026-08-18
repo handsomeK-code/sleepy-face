@@ -13,8 +13,49 @@ type SavedFailurePhoto = {
 type UploadedFailurePhoto = {
   imageUrl: string;
   localUri: string;
+  photoRecord: PhotoRecord;
   storagePath: string;
 };
+
+type PhotoRecordRow = {
+  id: string;
+  profile_id: string;
+  image_url: string;
+  created_at: string;
+};
+
+export type PhotoRecord = {
+  id: string;
+  profileId: string;
+  imageUrl: string;
+  createdAt: string;
+};
+
+export type FailurePhotoUploadErrorCode =
+  | 'local_photo_missing'
+  | 'not_authenticated'
+  | 'storage_upload_failed'
+  | 'photo_record_insert_failed';
+
+export class FailurePhotoUploadError extends Error {
+  constructor(
+    public readonly code: FailurePhotoUploadErrorCode,
+    message: string,
+    public readonly cause?: unknown,
+  ) {
+    super(message);
+    this.name = 'FailurePhotoUploadError';
+  }
+}
+
+function mapPhotoRecord(row: PhotoRecordRow): PhotoRecord {
+  return {
+    createdAt: row.created_at,
+    id: row.id,
+    imageUrl: row.image_url,
+    profileId: row.profile_id,
+  };
+}
 
 async function ensureFailurePhotoDirectory() {
   if (!FileSystem.documentDirectory) {
@@ -72,13 +113,20 @@ export async function uploadFailurePhoto(localPhotoUri: string) {
   const localPhoto = await FileSystem.getInfoAsync(localPhotoUri);
 
   if (!localPhoto.exists) {
-    throw new Error('アップロードする写真がローカルにありません。');
+    throw new FailurePhotoUploadError(
+      'local_photo_missing',
+      'Upload requires an existing local failure photo.',
+    );
   }
 
   const userResult = await supabase.auth.getUser();
 
   if (userResult.error || !userResult.data.user) {
-    throw new Error('写真のアップロードにはログインが必要です。');
+    throw new FailurePhotoUploadError(
+      'not_authenticated',
+      'Failure photo upload requires an authenticated user.',
+      userResult.error,
+    );
   }
 
   const profileId = userResult.data.user.id;
@@ -96,7 +144,11 @@ export async function uploadFailurePhoto(localPhotoUri: string) {
     });
 
   if (error) {
-    throw error;
+    throw new FailurePhotoUploadError(
+      'storage_upload_failed',
+      'Failure photo Storage upload failed.',
+      error,
+    );
   }
 
   const {
@@ -104,18 +156,27 @@ export async function uploadFailurePhoto(localPhotoUri: string) {
   } = supabase.storage.from(FAILURE_PHOTO_BUCKET).getPublicUrl(storagePath);
 
   // 現在のMVPでは、feed/profile 側が photos テーブルの image_url を読む前提になっている。
-  const { error: photoRecordError } = await supabase.from('photos').insert({
-    image_url: publicUrl,
-    profile_id: profileId,
-  });
+  const { data: photoRecord, error: photoRecordError } = await supabase
+    .from('photos')
+    .insert({
+      image_url: publicUrl,
+      profile_id: profileId,
+    })
+    .select('id, profile_id, image_url, created_at')
+    .single();
 
-  if (photoRecordError) {
-    throw photoRecordError;
+  if (photoRecordError || !photoRecord) {
+    throw new FailurePhotoUploadError(
+      'photo_record_insert_failed',
+      'Failure photo record insert failed.',
+      photoRecordError,
+    );
   }
 
   return {
     imageUrl: publicUrl,
     localUri: localPhotoUri,
+    photoRecord: mapPhotoRecord(photoRecord),
     storagePath,
   } satisfies UploadedFailurePhoto;
 }
