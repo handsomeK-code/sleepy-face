@@ -67,12 +67,13 @@ These are required by the product/API docs but are not currently installed in `p
 
 | dependency / capability | purpose |
 | --- | --- |
-| Face detection library, likely ML Kit through a React Native package | Face Verification on device |
 | Network status detection capability | Universal Offline Page and active-offline failure handling |
 
-Exact package choices for face detection and network detection still need implementation validation against Expo 57 compatibility.
+Exact package choices for network detection still need implementation validation against Expo 57 compatibility.
 
 Android Alarm Mechanics use a local Expo native module in Kotlin for Android-only exact alarm scheduling, default alarm tone playback, full-screen notification launch, and test ringing controls. This requires a rebuilt native Android app and is not supported in Expo Go.
+
+Android Face Proof uses a local Expo native module in Kotlin with Google ML Kit face detection for on-device face presence checks. This requires a rebuilt native Android app and is not supported in Expo Go.
 
 ## Backend Platform
 
