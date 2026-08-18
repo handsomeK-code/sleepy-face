@@ -60,6 +60,7 @@ The MVP supports:
 - Editing saved alarms
 - Deleting saved alarms
 - Viewing saved alarms
+- Turning saved alarms ON or OFF
 - Starting the Wake Up Challenge when an alarm rings
 
 Rules:
@@ -71,8 +72,8 @@ Rules:
 - Two Saved Alarms cannot include the same selected weekday.
 - If a selected weekday is already used, the app should block the change and direct the user to edit the existing alarm for that day.
 - Saved Alarms cannot be edited or deleted while they are the active Daily Alarm Attempt.
+- Saved Alarm ON/OFF state is stored locally with the Saved Alarm. Older local alarms without this state are treated as ON.
 - There is no snooze behavior in the MVP.
-- There is no alarm enable/disable state in the MVP.
 
 ## 4. Wake Up Challenge
 
@@ -101,6 +102,9 @@ Photo Capture asks the user to take a selfie after the alarm rings.
 
 Rules:
 
+- The app can capture a selfie with the device camera.
+- The captured photo is copied into app local storage before upload.
+- The app can upload the captured photo to Supabase Storage and create a simple `photos` table record for the current user.
 - Each photo attempt has a 2-minute Photo Timer.
 - A bad or timed-out photo attempt counts as a Bad Photo Attempt.
 - Three Bad Photo Attempts cause Challenge Failure.
@@ -194,7 +198,6 @@ The following are not part of the MVP:
 - Email/password login
 - Guest login
 - Snooze
-- Alarm enable/disable
 - Friend requests
 - Friend removal
 - Contact import
