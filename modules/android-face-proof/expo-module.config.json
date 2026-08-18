@@ -1,0 +1,6 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["com.team5.sleepyface.faceproof.AndroidFaceProofModule"]
+  }
+}

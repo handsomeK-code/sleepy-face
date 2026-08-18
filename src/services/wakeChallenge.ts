@@ -109,6 +109,18 @@ export async function getLatestFailurePhoto() {
   };
 }
 
+export async function deleteFailurePhotoLocally(localPhotoUri: string) {
+  const localPhoto = await FileSystem.getInfoAsync(localPhotoUri);
+
+  if (!localPhoto.exists) {
+    return;
+  }
+
+  await FileSystem.deleteAsync(localPhotoUri, {
+    idempotent: true,
+  });
+}
+
 export async function uploadFailurePhoto(localPhotoUri: string) {
   const localPhoto = await FileSystem.getInfoAsync(localPhotoUri);
 

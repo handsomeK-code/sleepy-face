@@ -78,7 +78,7 @@ Screen responsibilities:
 | `add-alarm.tsx` | Create a new Saved Alarm with time and selected weekdays. |
 | `edit-alarm.tsx` | Edit or delete an existing Saved Alarm. |
 | `ringing.tsx` | Show the active ringing alarm and start the Wake Up Challenge. |
-| `face-check.tsx` | Capture a selfie, save the latest captured photo locally, and upload it as a simple failure photo record. Face Verification logic is still a later slice. |
+| `face-check.tsx` | Capture a selfie, save the latest captured photo locally, run Android Face Proof with ML Kit for device testing, and upload an accepted photo through the current simple photo-record path. |
 | `face-check-success.tsx` | Show Face Verification success and proceed to Quiz. |
 | `face-check-failure.tsx` | Show Face Verification failure and return to retake flow. |
 | `quiz.tsx` | Ask arithmetic Quiz Questions and track correct answers and timer state. |
@@ -100,6 +100,7 @@ src/services/
 ├── auth.ts
 ├── user.ts
 ├── friend.ts
+├── face-proof.ts
 ├── quiz.ts
 └── wakeChallenge.ts
 ```
@@ -110,6 +111,7 @@ Service responsibilities:
 | --- | --- |
 | `alarm.ts` | Saved Alarm create/list/update/delete, ON/OFF toggle persistence, next alarm calculation, local scheduling, and native alarm module calls. |
 | `auth.ts` | Supabase OAuth-only Google Login, browser auth-session lifecycle, Auth User ID lookup, and auth-state subscription. |
+| `face-proof.ts` | TypeScript boundary for Android local Face Proof, mapping native ML Kit face-detection results into stable passed/failed proof results. |
 | `user.ts` | Initial Setup Profile lookup and Profile creation with public User ID and Display Name. |
 | `friend.ts` | Profile search, add Friend, and list Friends. |
 | `quiz.ts` | Service-only Quiz Question generation, answer checking, Quiz Progress and Quiz Attempt Number tracking, and current-schema quiz-failure photo recording. |
