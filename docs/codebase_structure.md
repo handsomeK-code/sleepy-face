@@ -100,6 +100,7 @@ src/services/
 ├── auth.ts
 ├── user.ts
 ├── friend.ts
+├── quiz.ts
 └── wakeChallenge.ts
 ```
 
@@ -111,6 +112,7 @@ Service responsibilities:
 | `auth.ts` | Supabase OAuth-only Google Login, browser auth-session lifecycle, Auth User ID lookup, and auth-state subscription. |
 | `user.ts` | Initial Setup Profile lookup and Profile creation with public User ID and Display Name. |
 | `friend.ts` | Profile search, add Friend, and list Friends. |
+| `quiz.ts` | Service-only Quiz Question generation, answer checking, Quiz Progress and Quiz Attempt Number tracking, and current-schema quiz-failure photo recording. |
 | `wakeChallenge.ts` | Captured-photo local persistence, latest local photo lookup, Supabase Storage upload, and simple `photos` record creation. Daily Alarm Attempt and final Failure Card creation are later slices. |
 
 ## `src/lib/`
