@@ -80,6 +80,7 @@ describe('user service', () => {
       data: {
         created_at: '2026-08-16T00:00:00.000Z',
         display_name: 'Sleepy User',
+        icon_url: 'woman',
         id: 'auth-user-id',
         user_id: 'sleepy-user',
       },
@@ -89,17 +90,40 @@ describe('user service', () => {
     await expect(getMyProfile()).resolves.toEqual({
       createdAt: '2026-08-16T00:00:00.000Z',
       displayName: 'Sleepy User',
+      iconId: 'woman',
       id: 'auth-user-id',
       userId: 'sleepy-user',
     });
   });
 
-  it('creates a Profile with public User ID and Display Name', async () => {
+  it('falls back to the default icon when a Profile has no recognized icon', async () => {
+    mocks.getUser.mockResolvedValue({
+      data: { user: { id: 'auth-user-id' } },
+      error: null,
+    });
+    mocks.maybeSingle.mockResolvedValue({
+      data: {
+        created_at: '2026-08-16T00:00:00.000Z',
+        display_name: 'Sleepy User',
+        icon_url: null,
+        id: 'auth-user-id',
+        user_id: 'sleepy-user',
+      },
+      error: null,
+    });
+
+    await expect(getMyProfile()).resolves.toMatchObject({
+      iconId: 'human',
+    });
+  });
+
+  it('creates a Profile with public User ID, Display Name, and icon', async () => {
     mocks.rpc.mockResolvedValue({
       data: {
         data: {
           created_at: '2026-08-16T00:00:00.000Z',
           display_name: 'Sleepy User',
+          icon_url: 'boy',
           profile_id: 'auth-user-id',
           user_id: 'sleepy-user',
         },
@@ -111,17 +135,39 @@ describe('user service', () => {
     await expect(
       createProfile({
         displayName: 'Sleepy User',
+        iconId: 'boy',
         publicUserId: 'sleepy-user',
       }),
     ).resolves.toEqual({
       createdAt: '2026-08-16T00:00:00.000Z',
       displayName: 'Sleepy User',
+      iconId: 'boy',
       id: 'auth-user-id',
       userId: 'sleepy-user',
     });
     expect(mocks.rpc).toHaveBeenCalledWith('create_profile', {
       display_name: 'Sleepy User',
+      icon_id: 'boy',
       user_id: 'sleepy-user',
+    });
+  });
+
+  it('maps an invalid icon identifier to a typed user-service error', async () => {
+    mocks.rpc.mockResolvedValue({
+      data: {
+        code: 'invalid_profile_input',
+        error: 'Unknown icon.',
+        status: 'error',
+      },
+      error: null,
+    });
+
+    await createProfile({
+      displayName: 'Sleepy User',
+      iconId: 'boy',
+      publicUserId: 'sleepy-user',
+    }).catch((error: unknown) => {
+      expectUserServiceError(error, 'invalid_profile_input');
     });
   });
 
@@ -137,6 +183,7 @@ describe('user service', () => {
 
     await createProfile({
       displayName: 'Sleepy User',
+      iconId: 'human',
       publicUserId: 'sleepy-user',
     }).catch((error: unknown) => {
       expectUserServiceError(error, 'user_id_already_taken');
@@ -155,6 +202,7 @@ describe('user service', () => {
 
     await createProfile({
       displayName: 'Sleepy User',
+      iconId: 'human',
       publicUserId: 'sleepy-user',
     }).catch((error: unknown) => {
       expectUserServiceError(error, 'profile_already_created');
@@ -173,6 +221,7 @@ describe('user service', () => {
 
     await createProfile({
       displayName: 'Sleepy User',
+      iconId: 'human',
       publicUserId: 'sleepy-user',
     }).catch((error: unknown) => {
       expectUserServiceError(error, 'not_authenticated');
@@ -187,6 +236,7 @@ describe('user service', () => {
 
     await createProfile({
       displayName: 'Sleepy User',
+      iconId: 'human',
       publicUserId: 'sleepy-user',
     }).catch((error: unknown) => {
       expectUserServiceError(error, 'unexpected_error');

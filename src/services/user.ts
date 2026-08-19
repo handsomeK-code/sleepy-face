@@ -1,15 +1,47 @@
 import { supabase } from '@/lib/supabase';
 
+export const PROFILE_ICON_IDS = [
+  'human',
+  'man',
+  'man2',
+  'woman',
+  'boy',
+  'child',
+  'old-man',
+  'grandmother',
+] as const;
+
+export type ProfileIconId = (typeof PROFILE_ICON_IDS)[number];
+
+export const DEFAULT_PROFILE_ICON_ID: ProfileIconId = 'human';
+
+export function isProfileIconId(value: string): value is ProfileIconId {
+  return (PROFILE_ICON_IDS as readonly string[]).includes(value);
+}
+
+export function toProfileIconId(
+  value: string | null | undefined,
+): ProfileIconId {
+  return value != null && isProfileIconId(value)
+    ? value
+    : DEFAULT_PROFILE_ICON_ID;
+}
+
 export type Profile = {
   id: string;
   userId: string;
   displayName: string;
+  iconId: ProfileIconId;
   createdAt: string;
 };
 
 export type CreateProfileInput = {
   publicUserId: string;
   displayName: string;
+};
+
+export type ProfileCreationInput = CreateProfileInput & {
+  iconId: ProfileIconId;
 };
 
 export type InitialSetupValidationErrorCode =
@@ -36,6 +68,7 @@ type ProfileRow = {
   id: string;
   user_id: string;
   display_name: string;
+  icon_url: string | null;
   created_at: string;
 };
 
@@ -43,6 +76,7 @@ type CreateProfileRpcData = {
   profile_id: string;
   user_id: string;
   display_name: string;
+  icon_url: string | null;
   created_at: string;
 };
 
@@ -116,6 +150,7 @@ function mapProfile(row: ProfileRow): Profile {
   return {
     createdAt: row.created_at,
     displayName: row.display_name,
+    iconId: toProfileIconId(row.icon_url),
     id: row.id,
     userId: row.user_id,
   };
@@ -125,6 +160,7 @@ function mapCreatedProfile(row: CreateProfileRpcData): Profile {
   return {
     createdAt: row.created_at,
     displayName: row.display_name,
+    iconId: toProfileIconId(row.icon_url),
     id: row.profile_id,
     userId: row.user_id,
   };
@@ -190,7 +226,7 @@ export async function getMyProfile(): Promise<Profile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, user_id, display_name, created_at')
+    .select('id, user_id, display_name, icon_url, created_at')
     .eq('id', userResult.data.user.id)
     .maybeSingle();
 
@@ -211,10 +247,12 @@ export async function getMyProfile(): Promise<Profile | null> {
 
 export async function createProfile({
   displayName,
+  iconId,
   publicUserId,
-}: CreateProfileInput): Promise<Profile> {
+}: ProfileCreationInput): Promise<Profile> {
   const { data, error } = await supabase.rpc('create_profile', {
     display_name: displayName,
+    icon_id: iconId,
     user_id: publicUserId,
   });
 
