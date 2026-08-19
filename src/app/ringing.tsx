@@ -16,6 +16,7 @@ import {
 } from '@/services/android-alarm-mechanics';
 import {
   getAlarmTimerState,
+  startTimer,
   startTimerFromStartedAt,
   useAlarmTimer,
 } from '@/services/alarm-timer';
@@ -123,6 +124,7 @@ export default function RingingScreen() {
     try {
       setErrorMessage(null);
       await stopRingingAlarm();
+      startTimer(ALARM_TIMER_SECONDS);
       router.replace({
         pathname: '/face-check',
         params: {
