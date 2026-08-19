@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -244,35 +245,40 @@ export default function AddAlarmScreen() {
           <TimeWheel onChange={setMinute} options={MINUTES} value={minute} />
         </View>
 
-        <View style={styles.weekdaySection}>
-          <Text style={styles.weekdayTitle}>繰り返し</Text>
-          <View style={styles.weekdayRow}>
-            {WEEKDAY_OPTIONS.map((weekday) => {
-              const isSelected = selectedWeekdays.includes(weekday.value);
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          style={styles.scroll}
+        >
+          <View style={styles.weekdaySection}>
+            <Text style={styles.weekdayTitle}>繰り返し</Text>
+            <View style={styles.weekdayRow}>
+              {WEEKDAY_OPTIONS.map((weekday) => {
+                const isSelected = selectedWeekdays.includes(weekday.value);
 
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  key={weekday.value}
-                  onPress={() => toggleWeekday(weekday.value)}
-                  style={[
-                    styles.weekdayButton,
-                    isSelected && styles.weekdayButtonSelected,
-                  ]}
-                >
-                  <Text
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={weekday.value}
+                    onPress={() => toggleWeekday(weekday.value)}
                     style={[
-                      styles.weekdayText,
-                      isSelected && styles.weekdayTextSelected,
+                      styles.weekdayButton,
+                      isSelected && styles.weekdayButtonSelected,
                     ]}
                   >
-                    {weekday.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                    <Text
+                      style={[
+                        styles.weekdayText,
+                        isSelected && styles.weekdayTextSelected,
+                      ]}
+                    >
+                      {weekday.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        </ScrollView>
 
         {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 
@@ -307,14 +313,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 120,
+  },
   header: {
     alignItems: 'center',
     borderBottomColor: '#f5f5f5',
     borderBottomWidth: 1,
     flexDirection: 'row',
-    height: 61,
     justifyContent: 'center',
+    minHeight: 61,
     paddingHorizontal: 22,
+    paddingVertical: 12,
   },
   closeButton: {
     alignItems: 'center',
@@ -334,8 +348,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f5f5f5',
     borderBottomWidth: 1,
     flexDirection: 'row',
-    height: 270,
     justifyContent: 'center',
+    minHeight: 200,
+    paddingVertical: 24,
   },
   timeWheel: {
     alignItems: 'center',
