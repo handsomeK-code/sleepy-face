@@ -174,82 +174,97 @@ export default function ProfileSetupScreen() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>プロフィール設定</Text>
+        <View style={styles.topContent}>
+          <Text style={styles.title}>プロフィール設定</Text>
 
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarPreview}>
-            <Image
-              contentFit="cover"
-              source={PROFILE_ICON_SOURCES[iconId]}
-              style={styles.avatarPreviewImage}
+          <View style={styles.avatarSection}>
+            <View style={styles.avatarPreview}>
+              <Image
+                contentFit="cover"
+                source={PROFILE_ICON_SOURCES[iconId]}
+                style={styles.avatarPreviewImage}
+              />
+            </View>
+
+            <View style={styles.iconGrid}>
+              {PROFILE_ICON_IDS.map((id) => {
+                const isSelected = id === iconId;
+
+                return (
+                  <Pressable
+                    accessibilityLabel={PROFILE_ICON_LABELS[id]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isSelected }}
+                    disabled={isSubmitting}
+                    key={id}
+                    onPress={() => setIconId(id)}
+                    style={({ pressed }) => [
+                      styles.iconOption,
+                      isSelected && styles.iconOptionSelected,
+                      pressed && styles.iconOptionPressed,
+                    ]}
+                  >
+                    <Image
+                      contentFit="cover"
+                      source={PROFILE_ICON_SOURCES[id]}
+                      style={styles.iconOptionImage}
+                    />
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={styles.avatarCaption}>
+              プロフィールアイコンを選んでください
+            </Text>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>ユーザー名</Text>
+            <TextInput
+              editable={!isSubmitting}
+              onChangeText={setDisplayName}
+              placeholder="例：山田 太郎"
+              placeholderTextColor="#a3a3a3"
+              style={styles.input}
+              value={displayName}
             />
           </View>
 
-          <View style={styles.iconGrid}>
-            {PROFILE_ICON_IDS.map((id) => {
-              const isSelected = id === iconId;
-
-              return (
-                <Pressable
-                  accessibilityLabel={PROFILE_ICON_LABELS[id]}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isSelected }}
-                  disabled={isSubmitting}
-                  key={id}
-                  onPress={() => setIconId(id)}
-                  style={({ pressed }) => [
-                    styles.iconOption,
-                    isSelected && styles.iconOptionSelected,
-                    pressed && styles.iconOptionPressed,
-                  ]}
-                >
-                  <Image
-                    contentFit="cover"
-                    source={PROFILE_ICON_SOURCES[id]}
-                    style={styles.iconOptionImage}
-                  />
-                </Pressable>
-              );
-            })}
+          <View style={styles.field}>
+            <Text style={styles.label}>userID</Text>
+            <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isSubmitting}
+              onChangeText={handlePublicUserIdChange}
+              placeholder="例：yamada_kun"
+              placeholderTextColor="#a3a3a3"
+              style={styles.input}
+              value={publicUserId}
+            />
+            <Text style={styles.helperText}>友達検索に使用します</Text>
           </View>
         </View>
 
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          editable={!isSubmitting}
-          onChangeText={handlePublicUserIdChange}
-          placeholder="ユーザーID"
-          placeholderTextColor="#a3a3a3"
-          style={styles.input}
-          value={publicUserId}
-        />
+        <View style={styles.bottomContent}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isSubmitting}
+            onPress={handleSubmit}
+            style={({ pressed }) => [
+              styles.submitButton,
+              pressed && styles.submitButtonPressed,
+              isSubmitting && styles.submitButtonDisabled,
+            ]}
+          >
+            <Text style={styles.submitButtonText}>
+              {isSubmitting ? '作成中...' : '登録する'}
+            </Text>
+          </Pressable>
 
-        <TextInput
-          editable={!isSubmitting}
-          onChangeText={setDisplayName}
-          placeholder="表示名"
-          placeholderTextColor="#a3a3a3"
-          style={styles.input}
-          value={displayName}
-        />
-
-        <Pressable
-          accessibilityRole="button"
-          disabled={isSubmitting}
-          onPress={handleSubmit}
-          style={({ pressed }) => [
-            styles.submitButton,
-            pressed && styles.submitButtonPressed,
-            isSubmitting && styles.submitButtonDisabled,
-          ]}
-        >
-          <Text style={styles.submitButtonText}>
-            {isSubmitting ? '作成中...' : '登録'}
-          </Text>
-        </Pressable>
-
-        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -262,21 +277,44 @@ const styles = StyleSheet.create({
   },
   container: {
     flexGrow: 1,
-    gap: 16,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingVertical: 40,
   },
+  topContent: {
+    gap: 16,
+  },
+  bottomContent: {
+    gap: 16,
+    marginTop: 32,
+  },
   title: {
     color: '#171717',
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: '800',
-    textAlign: 'center',
+    textAlign: 'left',
   },
   avatarSection: {
     alignItems: 'center',
-    gap: 20,
+    gap: 16,
     marginVertical: 8,
+  },
+  avatarCaption: {
+    color: '#737373',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  field: {
+    gap: 8,
+  },
+  label: {
+    color: '#171717',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  helperText: {
+    color: '#737373',
+    fontSize: 13,
   },
   avatarPreview: {
     alignItems: 'center',
