@@ -25,6 +25,7 @@ import {
   listFriendsFeed,
   type FriendsFeedItem,
 } from '@/services/home-feed';
+import type { ProfileIconId } from '@/services/user';
 
 function getHomeFeedErrorMessage(error: unknown): string {
   if (error instanceof HomeFeedServiceError) {
@@ -119,6 +120,25 @@ export default function HomeScreen() {
     await handleRefresh();
   }, [accessState, handleRefresh]);
 
+  // DEV-ONLY: injects a fake feed card (no Supabase write) so the feed layout can be previewed with content. Remove before ship.
+  const handleAddMockFeedItem = useCallback(() => {
+    const mockIconIds: ProfileIconId[] = ['woman', 'man', 'boy', 'grandmother'];
+    const mockIconId =
+      mockIconIds[Math.floor(Math.random() * mockIconIds.length)];
+
+    setFeed((currentFeed) => [
+      {
+        createdAt: new Date().toISOString(),
+        displayName: 'テストユーザー',
+        iconId: mockIconId,
+        imageUrl: `https://placehold.co/600x600/e5e5e5/171717?text=MOCK+${Date.now()}`,
+        photoId: `mock-${Date.now()}`,
+        profileId: 'mock-profile',
+      },
+      ...currentFeed,
+    ]);
+  }, []);
+
   const renderItem: ListRenderItem<FriendsFeedItem> = ({ item }) => (
     <View style={styles.feedCard}>
       <View style={styles.feedCardHeader}>
@@ -150,15 +170,24 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>ホーム</Text>
 
-          {/* DEV-ONLY: no design, just to preview the blocked-state UI. Remove before ship. */}
-          <Pressable
-            accessibilityRole="button"
-            onPress={handleToggleDebugBlock}
-          >
-            <Text style={styles.debugToggleText}>
-              [DEBUG] {accessState === 'blocked' ? '解除' : 'ブロック'}
-            </Text>
-          </Pressable>
+          {/* DEV-ONLY: no design, just to preview the feed/blocked-state UI. Remove before ship. */}
+          <View style={styles.debugButtonRow}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleAddMockFeedItem}
+            >
+              <Text style={styles.debugToggleText}>[DEBUG] +写真</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleToggleDebugBlock}
+            >
+              <Text style={styles.debugToggleText}>
+                [DEBUG] {accessState === 'blocked' ? '解除' : 'ブロック'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.content}>
@@ -232,6 +261,10 @@ const styles = StyleSheet.create({
     color: '#171717',
     fontSize: 20,
     fontWeight: '800',
+  },
+  debugButtonRow: {
+    flexDirection: 'row',
+    gap: 14,
   },
   debugToggleText: {
     color: '#b42318',
