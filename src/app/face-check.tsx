@@ -23,7 +23,6 @@ import {
 import {
   checkFaceProof,
   shouldRetainFaceProofPhoto,
-  type FaceProofResult,
 } from '@/services/face-proof';
 import {
   deleteFailurePhotoLocally,
@@ -37,21 +36,6 @@ function getErrorMessage(error: unknown) {
   }
 
   return '処理に失敗しました。';
-}
-
-function getFaceProofFailureMessage(
-  result: Exclude<FaceProofResult, { status: 'passed' }>,
-) {
-  switch (result.reason) {
-    case 'detector-error':
-      return '顔判定に失敗しました。もう一度試してください。';
-    case 'invalid-photo':
-      return '写真を読み取れませんでした。もう一度撮影してください。';
-    case 'no-face-detected':
-      return '顔が検出できませんでした。';
-    case 'unsupported-platform':
-      return 'この端末では顔判定を利用できません。';
-  }
 }
 
 export default function FaceCheckScreen() {
@@ -118,7 +102,7 @@ export default function FaceCheckScreen() {
 
       if (shouldRetainFaceProofPhoto(nextFaceProofResult)) {
         router.replace({
-          pathname: '/quiz',
+          pathname: '/face-check-success',
           params: {
             alarmId: params.alarmId ?? '',
             localPhotoUri: savedPhoto.uri,
@@ -141,12 +125,13 @@ export default function FaceCheckScreen() {
       }
 
       resumeTimer();
-      setMessage(
-        `${getFaceProofFailureMessage(nextFaceProofResult)} あと${
-          MAX_BAD_PHOTO_ATTEMPTS - nextBadPhotoAttempts
-        }回撮影できます。`,
-      );
-      router.setParams({ badPhotoAttempts: String(nextBadPhotoAttempts) });
+      router.replace({
+        pathname: '/face-check-failure',
+        params: {
+          alarmId: params.alarmId ?? '',
+          badPhotoAttempts: String(nextBadPhotoAttempts),
+        },
+      });
     } catch (error) {
       resumeTimer();
       setIsCameraOpen(false);
