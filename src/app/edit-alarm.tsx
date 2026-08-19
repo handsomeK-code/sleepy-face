@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -339,51 +340,56 @@ export default function EditAlarmScreen() {
               />
             </View>
 
-            <View style={styles.weekdaySection}>
-              <Text style={styles.weekdayTitle}>繰り返し</Text>
-              <View style={styles.weekdayRow}>
-                {WEEKDAY_OPTIONS.map((weekday) => {
-                  const isSelected = selectedWeekdays.includes(weekday.value);
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              style={styles.scroll}
+            >
+              <View style={styles.weekdaySection}>
+                <Text style={styles.weekdayTitle}>繰り返し</Text>
+                <View style={styles.weekdayRow}>
+                  {WEEKDAY_OPTIONS.map((weekday) => {
+                    const isSelected = selectedWeekdays.includes(weekday.value);
 
-                  return (
-                    <Pressable
-                      accessibilityRole="button"
-                      disabled={isBusy}
-                      key={weekday.value}
-                      onPress={() => toggleWeekday(weekday.value)}
-                      style={[
-                        styles.weekdayButton,
-                        isSelected && styles.weekdayButtonSelected,
-                        isBusy && styles.disabled,
-                      ]}
-                    >
-                      <Text
+                    return (
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={isBusy}
+                        key={weekday.value}
+                        onPress={() => toggleWeekday(weekday.value)}
                         style={[
-                          styles.weekdayText,
-                          isSelected && styles.weekdayTextSelected,
+                          styles.weekdayButton,
+                          isSelected && styles.weekdayButtonSelected,
+                          isBusy && styles.disabled,
                         ]}
                       >
-                        {weekday.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                        <Text
+                          style={[
+                            styles.weekdayText,
+                            isSelected && styles.weekdayTextSelected,
+                          ]}
+                        >
+                          {weekday.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
 
-            <Pressable
-              accessibilityRole="button"
-              disabled={isBusy}
-              onPress={handleDelete}
-              style={({ pressed }) => [
-                styles.deleteButton,
-                (pressed || isDeleting) && styles.deleteButtonPressed,
-              ]}
-            >
-              <Text style={styles.deleteButtonText}>
-                {isDeleting ? '削除中...' : 'アラームを削除'}
-              </Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isBusy}
+                onPress={handleDelete}
+                style={({ pressed }) => [
+                  styles.deleteButton,
+                  (pressed || isDeleting) && styles.deleteButtonPressed,
+                ]}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {isDeleting ? '削除中...' : 'アラームを削除'}
+                </Text>
+              </Pressable>
+            </ScrollView>
           </>
         )}
 
@@ -425,9 +431,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f5f5f5',
     borderBottomWidth: 1,
     flexDirection: 'row',
-    height: 61,
     justifyContent: 'center',
+    minHeight: 61,
     paddingHorizontal: 22,
+    paddingVertical: 12,
   },
   closeButton: {
     alignItems: 'center',
@@ -452,13 +459,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 120,
+  },
   timeSection: {
     alignItems: 'center',
     borderBottomColor: '#f5f5f5',
     borderBottomWidth: 1,
     flexDirection: 'row',
-    height: 270,
     justifyContent: 'center',
+    minHeight: 200,
+    paddingVertical: 24,
   },
   timeWheel: {
     alignItems: 'center',
