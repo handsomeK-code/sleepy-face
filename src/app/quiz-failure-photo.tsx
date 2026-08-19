@@ -1,30 +1,21 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton, challengeStyles } from '@/components/wake-challenge-ui';
-import {
-  getFailureAccessOutcome,
-  type WakeChallengeFailureReason,
-} from '@/services/wake-challenge-rules';
+import { recordQuizFailurePhoto } from '@/services/quiz';
+import { getFailureAccessOutcome } from '@/services/wake-challenge-rules';
 import { clearWakeChallengeAttempt } from '@/services/wake-challenge-attempt';
 
-type PhotoFailureReason = Extract<
-  WakeChallengeFailureReason,
-  'quiz-timeout' | 'quiz-upload-failed'
->;
+type UploadStatus = 'checking' | 'failed' | 'uploaded';
 
-function getPhotoFailureReason(reason?: string): PhotoFailureReason {
-  return reason === 'quiz-upload-failed'
-    ? 'quiz-upload-failed'
-    : 'quiz-timeout';
-}
-
-function getPhotoFailureCopy(reason: PhotoFailureReason) {
-  switch (reason) {
-    case 'quiz-timeout':
+function getStatusCopy(status: UploadStatus) {
+  switch (status) {
+    case 'checking':
+      return 'クイズが時間切れになりました。写真をアップロードしています…';
+    case 'uploaded':
       return 'クイズが時間切れになりました。この写真を失敗記録として保存しました。';
-    case 'quiz-upload-failed':
+    case 'failed':
       return 'クイズは時間切れです。写真の保存には失敗しましたが、撮影した写真はこちらです。';
   }
 }
@@ -32,14 +23,46 @@ function getPhotoFailureCopy(reason: PhotoFailureReason) {
 export default function QuizFailurePhotoScreen() {
   const params = useLocalSearchParams<{
     localPhotoUri?: string;
-    reason?: string;
   }>();
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>('checking');
 
   useEffect(() => {
     clearWakeChallengeAttempt().catch(() => {});
   }, []);
 
-  const failureReason = getPhotoFailureReason(params.reason);
+  useEffect(() => {
+    let isActive = true;
+
+    async function attemptUpload() {
+      if (!params.localPhotoUri) {
+        if (isActive) {
+          setUploadStatus('failed');
+        }
+        return;
+      }
+
+      try {
+        await recordQuizFailurePhoto(params.localPhotoUri);
+
+        if (isActive) {
+          setUploadStatus('uploaded');
+        }
+      } catch {
+        if (isActive) {
+          setUploadStatus('failed');
+        }
+      }
+    }
+
+    attemptUpload();
+
+    return () => {
+      isActive = false;
+    };
+  }, [params.localPhotoUri]);
+
+  const failureReason =
+    uploadStatus === 'uploaded' ? 'quiz-timeout' : 'quiz-upload-failed';
   const accessOutcome = getFailureAccessOutcome(failureReason);
   const actionLabel =
     accessOutcome === 'allowed' ? 'フィードへ進む' : 'アラームへ戻る';
@@ -54,19 +77,27 @@ export default function QuizFailurePhotoScreen() {
         <View style={styles.copy}>
           <Text style={challengeStyles.lightTitle}>起床失敗</Text>
           <Text style={challengeStyles.lightCaption}>
-            {getPhotoFailureCopy(failureReason)}
+            {getStatusCopy(uploadStatus)}
           </Text>
         </View>
 
         {!!params.localPhotoUri && (
-          <Image
-            resizeMode="cover"
-            source={{ uri: params.localPhotoUri }}
-            style={styles.photo}
-          />
+          <View style={styles.photoWrapper}>
+            <Image
+              resizeMode="cover"
+              source={{ uri: params.localPhotoUri }}
+              style={styles.photo}
+            />
+            {uploadStatus === 'checking' && (
+              <View style={styles.photoOverlay}>
+                <ActivityIndicator color="#ffffff" />
+              </View>
+            )}
+          </View>
         )}
 
         <ActionButton
+          disabled={uploadStatus === 'checking'}
           label={actionLabel}
           onPress={() => router.replace('/home')}
         />
@@ -81,12 +112,6 @@ const styles = StyleSheet.create({
     gap: 32,
     justifyContent: 'center',
     paddingBottom: 48,
-  },
-  screen: {
-    backgroundColor: '#ffffff',
-    flex: 1,
-    paddingHorizontal: 32,
-    paddingTop: 42,
   },
   copy: {
     gap: 12,
@@ -106,10 +131,29 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   photo: {
-    alignSelf: 'center',
     backgroundColor: '#f5f5f5',
     borderRadius: 20,
     height: 200,
     width: 200,
+  },
+  photoOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(23, 23, 23, 0.45)',
+    borderRadius: 20,
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  photoWrapper: {
+    alignSelf: 'center',
+  },
+  screen: {
+    backgroundColor: '#ffffff',
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingTop: 42,
   },
 });

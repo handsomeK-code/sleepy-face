@@ -9,7 +9,6 @@ import {
 import { resumeTimer, useAlarmTimer } from '@/services/alarm-timer';
 import {
   QuizServiceError,
-  recordQuizFailurePhoto,
   startQuiz,
   submitQuizAnswer,
   type QuizState,
@@ -68,7 +67,6 @@ export default function QuizScreen() {
   const [answerText, setAnswerText] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRecordingFailure, setIsRecordingFailure] = useState(false);
   const didHandleExpiry = useRef(false);
 
   useEffect(() => {
@@ -82,21 +80,12 @@ export default function QuizScreen() {
     });
   }, []);
 
-  const routeToPhotoFailure = useCallback(
-    (
-      reason: Extract<
-        WakeChallengeFailureReason,
-        'quiz-timeout' | 'quiz-upload-failed'
-      >,
-      localPhotoUri: string,
-    ) => {
-      router.replace({
-        pathname: '/quiz-failure-photo',
-        params: { localPhotoUri, reason },
-      });
-    },
-    [],
-  );
+  const routeToPhotoFailure = useCallback((localPhotoUri: string) => {
+    router.replace({
+      pathname: '/quiz-failure-photo',
+      params: { localPhotoUri },
+    });
+  }, []);
 
   useEffect(() => {
     if (timer?.status !== 'expired' || didHandleExpiry.current) {
@@ -105,23 +94,12 @@ export default function QuizScreen() {
 
     didHandleExpiry.current = true;
 
-    async function handleQuizTimeout() {
-      if (!params.localPhotoUri) {
-        routeToFailure('no-photo-timeout');
-        return;
-      }
-
-      setIsRecordingFailure(true);
-
-      try {
-        await recordQuizFailurePhoto(params.localPhotoUri);
-        routeToPhotoFailure('quiz-timeout', params.localPhotoUri);
-      } catch {
-        routeToPhotoFailure('quiz-upload-failed', params.localPhotoUri);
-      }
+    if (!params.localPhotoUri) {
+      routeToFailure('no-photo-timeout');
+      return;
     }
 
-    handleQuizTimeout();
+    routeToPhotoFailure(params.localPhotoUri);
   }, [
     params.localPhotoUri,
     routeToFailure,
@@ -130,10 +108,6 @@ export default function QuizScreen() {
   ]);
 
   function handleKeypadPress(key: QuizKeypadKey) {
-    if (isRecordingFailure) {
-      return;
-    }
-
     setErrorMessage(null);
     setAnswerText((current) => applyQuizKeypadInput(current, key));
   }
@@ -213,7 +187,6 @@ export default function QuizScreen() {
             {KEYPAD_KEYS.map((key) => (
               <Pressable
                 accessibilityRole="button"
-                disabled={isRecordingFailure}
                 key={key}
                 onPress={() => handleKeypadPress(key)}
                 style={({ pressed }) => [
@@ -227,9 +200,9 @@ export default function QuizScreen() {
           </View>
 
           <ActionButton
-            disabled={!answerText.trim() || isRecordingFailure}
-            label={isRecordingFailure ? '失敗を記録中' : '回答する'}
-            loading={isSubmitting || isRecordingFailure}
+            disabled={!answerText.trim()}
+            label="回答する"
+            loading={isSubmitting}
             onPress={handleSubmitAnswer}
           />
 
