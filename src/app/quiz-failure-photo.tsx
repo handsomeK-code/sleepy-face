@@ -1,6 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { ActionButton, challengeStyles } from '@/components/wake-challenge-ui';
 import { recordQuizFailurePhoto } from '@/services/quiz';
@@ -69,39 +76,41 @@ export default function QuizFailurePhotoScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.content}>
-        <View style={styles.icon}>
-          <Text style={styles.iconText}>×</Text>
-        </View>
-
-        <View style={styles.copy}>
-          <Text style={challengeStyles.lightTitle}>起床失敗</Text>
-          <Text style={challengeStyles.lightCaption}>
-            {getStatusCopy(uploadStatus)}
-          </Text>
-        </View>
-
-        {!!params.localPhotoUri && (
-          <View style={styles.photoWrapper}>
-            <Image
-              resizeMode="cover"
-              source={{ uri: params.localPhotoUri }}
-              style={styles.photo}
-            />
-            {uploadStatus === 'checking' && (
-              <View style={styles.photoOverlay}>
-                <ActivityIndicator color="#ffffff" />
-              </View>
-            )}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.content}>
+          <View style={styles.icon}>
+            <Text style={styles.iconText}>×</Text>
           </View>
-        )}
 
-        <ActionButton
-          disabled={uploadStatus === 'checking'}
-          label={actionLabel}
-          onPress={() => router.replace('/home')}
-        />
-      </View>
+          <View style={styles.copy}>
+            <Text style={challengeStyles.lightTitle}>起床失敗</Text>
+            <Text style={challengeStyles.lightCaption}>
+              {getStatusCopy(uploadStatus)}
+            </Text>
+          </View>
+
+          {!!params.localPhotoUri && (
+            <View style={styles.photoWrapper}>
+              <Image
+                resizeMode="cover"
+                source={{ uri: params.localPhotoUri }}
+                style={styles.photo}
+              />
+              {uploadStatus === 'checking' && (
+                <View style={styles.photoOverlay}>
+                  <ActivityIndicator color="#ffffff" />
+                </View>
+              )}
+            </View>
+          )}
+
+          <ActionButton
+            disabled={uploadStatus === 'checking'}
+            label={actionLabel}
+            onPress={() => router.replace('/home')}
+          />
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -133,8 +142,8 @@ const styles = StyleSheet.create({
   photo: {
     backgroundColor: '#f5f5f5',
     borderRadius: 20,
-    height: 200,
-    width: 200,
+    height: '100%',
+    width: '100%',
   },
   photoOverlay: {
     alignItems: 'center',
@@ -149,10 +158,16 @@ const styles = StyleSheet.create({
   },
   photoWrapper: {
     alignSelf: 'center',
+    aspectRatio: 1,
+    maxWidth: 220,
+    width: '60%',
   },
   screen: {
     backgroundColor: '#ffffff',
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 32,
     paddingTop: 42,
   },
