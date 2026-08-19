@@ -19,7 +19,7 @@ import {
 } from '@/services/alarm';
 
 const ITEM_HEIGHT = 64;
-const WHEEL_VIEWPORT_HEIGHT = 76;
+const WHEEL_VIEWPORT_HEIGHT = ITEM_HEIGHT;
 const WHEEL_VERTICAL_PADDING = (WHEEL_VIEWPORT_HEIGHT - ITEM_HEIGHT) / 2;
 const WHEEL_REPEAT_COUNT = 80;
 const WHEEL_START_REPEAT = Math.floor(WHEEL_REPEAT_COUNT / 2);
@@ -311,6 +311,7 @@ const styles = StyleSheet.create({
   timeWheel: {
     alignItems: 'center',
     height: 150,
+    justifyContent: 'center',
     width: 96,
   },
   timeWheelScroll: {
