@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -6,8 +7,13 @@ import {
   ChallengeScreen,
   challengeStyles,
 } from '@/components/wake-challenge-ui';
+import { clearWakeChallengeAttempt } from '@/services/wake-challenge-attempt';
 
 export default function QuizSuccessScreen() {
+  useEffect(() => {
+    clearWakeChallengeAttempt().catch(() => {});
+  }, []);
+
   return (
     <ChallengeScreen timer={{ remainingMs: 0, status: 'expired' }}>
       <View style={styles.content}>

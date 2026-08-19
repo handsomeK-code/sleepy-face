@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -10,6 +11,7 @@ import {
   getFailureAccessOutcome,
   type WakeChallengeFailureReason,
 } from '@/services/wake-challenge-rules';
+import { clearWakeChallengeAttempt } from '@/services/wake-challenge-attempt';
 
 function getFailureReason(reason?: string): WakeChallengeFailureReason {
   switch (reason) {
@@ -41,6 +43,10 @@ export default function QuizFailureScreen() {
     reason?: string;
     storagePath?: string;
   }>();
+
+  useEffect(() => {
+    clearWakeChallengeAttempt().catch(() => {});
+  }, []);
 
   const failureReason = getFailureReason(params.reason);
   const accessOutcome = getFailureAccessOutcome(failureReason);

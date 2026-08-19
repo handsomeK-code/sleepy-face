@@ -25,6 +25,7 @@ import {
   startTimerFromStartedAt,
   useAlarmTimer,
 } from '@/services/alarm-timer';
+import { startWakeChallengeAttempt } from '@/services/wake-challenge-attempt';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof AndroidAlarmMechanicsError) {
@@ -163,12 +164,14 @@ export default function RingingScreen() {
 
     try {
       setErrorMessage(null);
+      const activeAlarmId = ringingState?.alarmId ?? params.alarmId ?? '';
       await stopRingingAlarm();
       startTimer(ALARM_TIMER_SECONDS);
+      await startWakeChallengeAttempt({ alarmId: activeAlarmId || null });
       router.replace({
         pathname: '/face-check',
         params: {
-          alarmId: ringingState?.alarmId ?? params.alarmId ?? '',
+          alarmId: activeAlarmId,
           badPhotoAttempts: '0',
         },
       });
