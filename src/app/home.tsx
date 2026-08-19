@@ -170,24 +170,26 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>ホーム</Text>
 
-          {/* DEV-ONLY: no design, just to preview the feed/blocked-state UI. Remove before ship. */}
-          <View style={styles.debugButtonRow}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={handleAddMockFeedItem}
-            >
-              <Text style={styles.debugToggleText}>[DEBUG] +写真</Text>
-            </Pressable>
+          {/* DEV-ONLY: no design, just to preview the feed/blocked-state UI. __DEV__-gated so it never ships. */}
+          {__DEV__ && (
+            <View style={styles.debugButtonRow}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleAddMockFeedItem}
+              >
+                <Text style={styles.debugToggleText}>[DEBUG] +写真</Text>
+              </Pressable>
 
-            <Pressable
-              accessibilityRole="button"
-              onPress={handleToggleDebugBlock}
-            >
-              <Text style={styles.debugToggleText}>
-                [DEBUG] {accessState === 'blocked' ? '解除' : 'ブロック'}
-              </Text>
-            </Pressable>
-          </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleToggleDebugBlock}
+              >
+                <Text style={styles.debugToggleText}>
+                  [DEBUG] {accessState === 'blocked' ? '解除' : 'ブロック'}
+                </Text>
+              </Pressable>
+            </View>
+          )}
         </View>
 
         <View style={styles.content}>
