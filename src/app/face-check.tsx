@@ -189,8 +189,13 @@ export default function FaceCheckScreen() {
   return (
     <ChallengeScreen dark timer={timer}>
       <View style={styles.content}>
-        <View style={styles.cameraPreview}>
-          <Text style={styles.previewText}>顔を中央に合わせてください</Text>
+        <View style={styles.iconCircle}>
+          <View style={styles.cameraIcon}>
+            <View style={styles.cameraIconBump} />
+            <View style={styles.cameraIconBody}>
+              <View style={styles.cameraIconLens} />
+            </View>
+          </View>
         </View>
 
         <View style={styles.copy}>
@@ -253,30 +258,49 @@ const styles = StyleSheet.create({
     top: 0,
     zIndex: 1,
   },
-  cameraPreview: {
+  cameraIcon: {
     alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: '#262626',
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    borderRadius: 63,
-    borderStyle: 'dashed',
-    borderWidth: 2,
-    height: 318,
+  },
+  cameraIconBody: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 4,
+    height: 20,
     justifyContent: 'center',
-    width: 254,
+    width: 30,
+  },
+  cameraIconBump: {
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+    height: 5,
+    marginBottom: 1,
+    width: 12,
+  },
+  cameraIconLens: {
+    backgroundColor: '#171717',
+    borderRadius: 5,
+    height: 10,
+    width: 10,
   },
   content: {
+    alignItems: 'center',
     flex: 1,
-    justifyContent: 'space-between',
+    gap: 40,
+    justifyContent: 'center',
     paddingBottom: 48,
   },
   copy: {
     gap: 10,
   },
-  previewText: {
-    color: '#a3a3a3',
-    fontSize: 15,
-    fontWeight: '700',
+  iconCircle: {
+    alignItems: 'center',
+    backgroundColor: '#171717',
+    borderColor: '#ffffff',
+    borderRadius: 48,
+    borderWidth: 2,
+    height: 96,
+    justifyContent: 'center',
+    width: 96,
   },
   shutterInner: {
     backgroundColor: '#ffffff',
