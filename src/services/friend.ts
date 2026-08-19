@@ -1,10 +1,11 @@
 import { supabase } from '@/lib/supabase';
+import { toProfileIconId, type ProfileIconId } from '@/services/user';
 
 export type FriendSearchProfile = {
   id: string;
   userId: string;
   displayName: string;
-  iconUrl: string | null;
+  iconId: ProfileIconId;
   createdAt: string;
 };
 
@@ -63,7 +64,7 @@ function mapProfile(row: ProfileSearchRow): FriendSearchProfile {
   return {
     createdAt: row.created_at,
     displayName: row.display_name,
-    iconUrl: row.icon_url,
+    iconId: toProfileIconId(row.icon_url),
     id: row.id,
     userId: row.user_id,
   };

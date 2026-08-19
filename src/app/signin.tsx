@@ -1,6 +1,14 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import {
   GoogleLoginError,
@@ -62,32 +70,45 @@ export default function SigninScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.logoArea}>
+          <Image
+            contentFit="cover"
+            source={require('@/assets/images/app-icon.png')}
+            style={styles.logo}
+          />
+        </View>
+
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>SLEEPY FACE</Text>
-          <Text style={styles.title}>ログイン</Text>
+          <Text style={styles.title}>SleepyFace</Text>
           <Text style={styles.description}>
-            Googleアカウントでログインしてください。
+            クイズに失敗すると寝顔が友達に公開されるアラーム
           </Text>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          disabled={isLoading}
-          onPress={handleGoogleLogin}
-          style={({ pressed }) => [
-            styles.googleButton,
-            pressed && styles.buttonPressed,
-            isLoading && styles.buttonDisabled,
-          ]}
-        >
-          <Text style={styles.googleButtonText}>
-            {isLoading ? 'ログイン中...' : 'Googleでログイン'}
-          </Text>
-        </Pressable>
+        <View style={styles.footer}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isLoading}
+            onPress={handleGoogleLogin}
+            style={({ pressed }) => [
+              styles.googleButton,
+              pressed && styles.buttonPressed,
+              isLoading && styles.buttonDisabled,
+            ]}
+          >
+            <Text style={styles.googleMark}>G</Text>
+            <Text style={styles.googleButtonText}>
+              {isLoading ? 'ログイン中...' : 'Googleでログイン'}
+            </Text>
+          </Pressable>
 
-        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-      </View>
+          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -95,50 +116,68 @@ export default function SigninScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f7fb',
+    backgroundColor: '#fafafa',
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  logoArea: {
+    alignItems: 'center',
+  },
+  logo: {
+    borderRadius: 16,
+    height: 128,
+    width: 128,
   },
   header: {
-    marginBottom: 28,
-  },
-  eyebrow: {
-    color: '#536dfe',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1.6,
-    marginBottom: 10,
+    alignItems: 'center',
+    marginTop: 24,
   },
   title: {
-    color: '#172033',
+    color: '#171717',
     fontSize: 32,
     fontWeight: '800',
-    marginBottom: 10,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   description: {
-    color: '#657086',
+    color: '#737373',
     fontSize: 15,
-    lineHeight: 23,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  footer: {
+    gap: 16,
+    marginTop: 40,
   },
   googleButton: {
     alignItems: 'center',
-    backgroundColor: '#172033',
+    backgroundColor: '#fafafa',
+    borderColor: '#e5e5e5',
     borderRadius: 16,
+    borderWidth: 2,
+    flexDirection: 'row',
+    gap: 12,
     justifyContent: 'center',
-    minHeight: 56,
+    minHeight: 62,
     paddingHorizontal: 20,
   },
   buttonPressed: {
-    opacity: 0.82,
-  },
-  buttonDisabled: {
     opacity: 0.6,
   },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  googleMark: {
+    color: '#171717',
+    fontSize: 20,
+    fontWeight: '800',
+  },
   googleButtonText: {
-    color: '#ffffff',
+    color: '#171717',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -146,6 +185,6 @@ const styles = StyleSheet.create({
     color: '#b42318',
     fontSize: 14,
     lineHeight: 21,
-    marginTop: 16,
+    textAlign: 'center',
   },
 });
