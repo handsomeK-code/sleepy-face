@@ -4,7 +4,9 @@ import {
   UserServiceError,
   createProfile,
   getMyProfile,
+  updateProfile,
   validateInitialSetupInput,
+  validateProfileUpdateInput,
 } from '../user';
 
 const mocks = vi.hoisted(() => ({
@@ -14,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   maybeSingle: vi.fn(),
   rpc: vi.fn(),
   select: vi.fn(),
+  single: vi.fn(),
+  update: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase', () => ({
@@ -240,6 +244,125 @@ describe('user service', () => {
       publicUserId: 'sleepy-user',
     }).catch((error: unknown) => {
       expectUserServiceError(error, 'unexpected_error');
+    });
+  });
+
+  it('updates the Display Name and Profile Icon of the current Profile', async () => {
+    mocks.getUser.mockResolvedValue({
+      data: { user: { id: 'auth-user-id' } },
+      error: null,
+    });
+    mocks.from.mockReturnValue({ update: mocks.update });
+    mocks.update.mockReturnValue({ eq: mocks.eq });
+    mocks.eq.mockReturnValue({ select: mocks.select });
+    mocks.select.mockReturnValue({ single: mocks.single });
+    mocks.single.mockResolvedValue({
+      data: {
+        created_at: '2026-08-16T00:00:00.000Z',
+        display_name: 'New Name',
+        icon_url: 'woman',
+        id: 'auth-user-id',
+        user_id: 'sleepy-user',
+      },
+      error: null,
+    });
+
+    await expect(
+      updateProfile({ displayName: 'New Name', iconId: 'woman' }),
+    ).resolves.toEqual({
+      createdAt: '2026-08-16T00:00:00.000Z',
+      displayName: 'New Name',
+      iconId: 'woman',
+      id: 'auth-user-id',
+      userId: 'sleepy-user',
+    });
+    expect(mocks.from).toHaveBeenCalledWith('profiles');
+    expect(mocks.update).toHaveBeenCalledWith({
+      display_name: 'New Name',
+      icon_url: 'woman',
+    });
+    expect(mocks.eq).toHaveBeenCalledWith('id', 'auth-user-id');
+  });
+
+  it('rejects invalid Profile update input before calling Supabase', async () => {
+    await updateProfile({ displayName: '   ', iconId: 'human' }).catch(
+      (error: unknown) => {
+        expectUserServiceError(error, 'invalid_profile_input');
+      },
+    );
+    expect(mocks.getUser).not.toHaveBeenCalled();
+  });
+
+  it('requires authentication to update the Profile', async () => {
+    mocks.getUser.mockResolvedValue({
+      data: { user: null },
+      error: new Error('not authenticated'),
+    });
+
+    await updateProfile({ displayName: 'New Name', iconId: 'human' }).catch(
+      (error: unknown) => {
+        expectUserServiceError(error, 'not_authenticated');
+      },
+    );
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
+
+  it('maps a failed Profile update to an unexpected user-service error', async () => {
+    mocks.getUser.mockResolvedValue({
+      data: { user: { id: 'auth-user-id' } },
+      error: null,
+    });
+    mocks.from.mockReturnValue({ update: mocks.update });
+    mocks.update.mockReturnValue({ eq: mocks.eq });
+    mocks.eq.mockReturnValue({ select: mocks.select });
+    mocks.select.mockReturnValue({ single: mocks.single });
+    mocks.single.mockResolvedValue({
+      data: null,
+      error: new Error('update failed'),
+    });
+
+    await updateProfile({ displayName: 'New Name', iconId: 'human' }).catch(
+      (error: unknown) => {
+        expectUserServiceError(error, 'unexpected_error');
+      },
+    );
+  });
+});
+
+describe('validateProfileUpdateInput', () => {
+  it('trims Display Name and keeps the given icon', () => {
+    expect(
+      validateProfileUpdateInput({
+        displayName: '  New Name  ',
+        iconId: 'boy',
+      }),
+    ).toEqual({
+      isValid: true,
+      value: {
+        displayName: 'New Name',
+        iconId: 'boy',
+      },
+    });
+  });
+
+  it('rejects empty Display Name after trimming', () => {
+    expect(
+      validateProfileUpdateInput({ displayName: '   ', iconId: 'human' }),
+    ).toEqual({
+      code: 'display_name_required',
+      isValid: false,
+    });
+  });
+
+  it('rejects Display Names longer than thirty visible characters', () => {
+    expect(
+      validateProfileUpdateInput({
+        displayName: 'あ'.repeat(31),
+        iconId: 'human',
+      }),
+    ).toEqual({
+      code: 'display_name_too_long',
+      isValid: false,
     });
   });
 });
