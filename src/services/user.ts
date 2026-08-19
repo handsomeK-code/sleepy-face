@@ -57,6 +57,24 @@ export type InitialSetupValidationResult =
       code: InitialSetupValidationErrorCode;
     };
 
+export type UpdateProfileInput = {
+  displayName: string;
+  iconId: ProfileIconId;
+};
+
+export type ProfileUpdateValidationErrorCode =
+  'display_name_required' | 'display_name_too_long';
+
+export type ProfileUpdateValidationResult =
+  | {
+      isValid: true;
+      value: UpdateProfileInput;
+    }
+  | {
+      isValid: false;
+      code: ProfileUpdateValidationErrorCode;
+    };
+
 export type UserServiceErrorCode =
   | 'user_id_already_taken'
   | 'profile_already_created'
@@ -109,19 +127,23 @@ export function normalizePublicUserId(publicUserId: string): string {
   return publicUserId.trim().toLowerCase();
 }
 
-export function validateInitialSetupInput({
-  displayName,
-  publicUserId,
-}: CreateProfileInput): InitialSetupValidationResult {
-  const normalizedPublicUserId = normalizePublicUserId(publicUserId);
-  const trimmedDisplayName = displayName.trim();
+type DisplayNameValidationErrorCode =
+  'display_name_required' | 'display_name_too_long';
 
-  if (!PUBLIC_USER_ID_PATTERN.test(normalizedPublicUserId)) {
-    return {
-      code: 'public_user_id_invalid',
-      isValid: false,
+type DisplayNameValidationResult =
+  | {
+      isValid: true;
+      value: string;
+    }
+  | {
+      isValid: false;
+      code: DisplayNameValidationErrorCode;
     };
-  }
+
+// Shared by Initial Setup and the Profile screen's edit flow, which both apply the same
+// Display Name rules.
+function validateDisplayName(displayName: string): DisplayNameValidationResult {
+  const trimmedDisplayName = displayName.trim();
 
   if (trimmedDisplayName.length === 0) {
     return {
@@ -139,9 +161,53 @@ export function validateInitialSetupInput({
 
   return {
     isValid: true,
+    value: trimmedDisplayName,
+  };
+}
+
+export function validateInitialSetupInput({
+  displayName,
+  publicUserId,
+}: CreateProfileInput): InitialSetupValidationResult {
+  const normalizedPublicUserId = normalizePublicUserId(publicUserId);
+
+  if (!PUBLIC_USER_ID_PATTERN.test(normalizedPublicUserId)) {
+    return {
+      code: 'public_user_id_invalid',
+      isValid: false,
+    };
+  }
+
+  const displayNameResult = validateDisplayName(displayName);
+
+  if (!displayNameResult.isValid) {
+    return displayNameResult;
+  }
+
+  return {
+    isValid: true,
     value: {
-      displayName: trimmedDisplayName,
+      displayName: displayNameResult.value,
       publicUserId: normalizedPublicUserId,
+    },
+  };
+}
+
+export function validateProfileUpdateInput({
+  displayName,
+  iconId,
+}: UpdateProfileInput): ProfileUpdateValidationResult {
+  const displayNameResult = validateDisplayName(displayName);
+
+  if (!displayNameResult.isValid) {
+    return displayNameResult;
+  }
+
+  return {
+    isValid: true,
+    value: {
+      displayName: displayNameResult.value,
+      iconId,
     },
   };
 }
@@ -277,4 +343,49 @@ export async function createProfile({
       error,
     );
   }
+}
+
+// Display Name and Profile Icon are editable from the Profile screen; User ID stays fixed
+// after Initial Setup, so this updates the profiles row directly without any uniqueness check.
+export async function updateProfile(
+  input: UpdateProfileInput,
+): Promise<Profile> {
+  const validationResult = validateProfileUpdateInput(input);
+
+  if (!validationResult.isValid) {
+    throw new UserServiceError(
+      'invalid_profile_input',
+      'Invalid Profile update input.',
+    );
+  }
+
+  const userResult = await supabase.auth.getUser();
+
+  if (userResult.error || !userResult.data.user) {
+    throw new UserServiceError(
+      'not_authenticated',
+      'Profile update requires an authenticated user.',
+      userResult.error,
+    );
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      display_name: validationResult.value.displayName,
+      icon_url: validationResult.value.iconId,
+    })
+    .eq('id', userResult.data.user.id)
+    .select('id, user_id, display_name, icon_url, created_at')
+    .single();
+
+  if (error || !data) {
+    throw new UserServiceError(
+      'unexpected_error',
+      'Could not update Profile.',
+      error,
+    );
+  }
+
+  return mapProfile(data);
 }
