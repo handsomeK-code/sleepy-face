@@ -45,14 +45,24 @@ export default function QuizScreen() {
     resumeTimer();
   }, []);
 
-  const routeToFailure = useCallback(
-    (reason: WakeChallengeFailureReason, storagePath?: string) => {
+  const routeToFailure = useCallback((reason: WakeChallengeFailureReason) => {
+    router.replace({
+      pathname: '/quiz-failure',
+      params: { reason },
+    });
+  }, []);
+
+  const routeToPhotoFailure = useCallback(
+    (
+      reason: Extract<
+        WakeChallengeFailureReason,
+        'quiz-timeout' | 'quiz-upload-failed'
+      >,
+      localPhotoUri: string,
+    ) => {
       router.replace({
-        pathname: '/quiz-failure',
-        params: {
-          reason,
-          storagePath: storagePath ?? '',
-        },
+        pathname: '/quiz-failure-photo',
+        params: { localPhotoUri, reason },
       });
     },
     [],
@@ -74,15 +84,20 @@ export default function QuizScreen() {
       setIsRecordingFailure(true);
 
       try {
-        const result = await recordQuizFailurePhoto(params.localPhotoUri);
-        routeToFailure('quiz-timeout', result.storagePath);
+        await recordQuizFailurePhoto(params.localPhotoUri);
+        routeToPhotoFailure('quiz-timeout', params.localPhotoUri);
       } catch {
-        routeToFailure('quiz-upload-failed');
+        routeToPhotoFailure('quiz-upload-failed', params.localPhotoUri);
       }
     }
 
     handleQuizTimeout();
-  }, [params.localPhotoUri, routeToFailure, timer?.status]);
+  }, [
+    params.localPhotoUri,
+    routeToFailure,
+    routeToPhotoFailure,
+    timer?.status,
+  ]);
 
   function handleSubmitAnswer() {
     if (isSubmitting || timer?.status === 'expired') {

@@ -7,26 +7,26 @@ import {
   ChallengeScreen,
   challengeStyles,
 } from '@/components/wake-challenge-ui';
-import {
-  getFailureAccessOutcome,
-  type WakeChallengeFailureReason,
-} from '@/services/wake-challenge-rules';
+import type { WakeChallengeFailureReason } from '@/services/wake-challenge-rules';
 import { clearWakeChallengeAttempt } from '@/services/wake-challenge-attempt';
 
-function getFailureReason(reason?: string): WakeChallengeFailureReason {
+type NoPhotoFailureReason = Extract<
+  WakeChallengeFailureReason,
+  'app-quit' | 'bad-photo-limit' | 'no-photo-timeout'
+>;
+
+function getFailureReason(reason?: string): NoPhotoFailureReason {
   switch (reason) {
     case 'app-quit':
     case 'bad-photo-limit':
     case 'no-photo-timeout':
-    case 'quiz-timeout':
-    case 'quiz-upload-failed':
       return reason;
     default:
       return 'no-photo-timeout';
   }
 }
 
-function getFailureCopy(reason: WakeChallengeFailureReason) {
+function getFailureCopy(reason: NoPhotoFailureReason) {
   switch (reason) {
     case 'app-quit':
       return 'チャレンジの途中でアプリが終了しました。今日はフィードを見られません。';
@@ -34,17 +34,12 @@ function getFailureCopy(reason: WakeChallengeFailureReason) {
       return '顔写真を確認できなかったため、今日はフィードを見られません。';
     case 'no-photo-timeout':
       return '写真を残せないまま時間切れになりました。今日はフィードを見られません。';
-    case 'quiz-timeout':
-      return 'クイズが時間切れになりました。写真を失敗記録として保存しました。';
-    case 'quiz-upload-failed':
-      return 'クイズは時間切れです。写真の保存に失敗しました。';
   }
 }
 
 export default function QuizFailureScreen() {
   const params = useLocalSearchParams<{
     reason?: string;
-    storagePath?: string;
   }>();
 
   useEffect(() => {
@@ -52,9 +47,6 @@ export default function QuizFailureScreen() {
   }, []);
 
   const failureReason = getFailureReason(params.reason);
-  const accessOutcome = getFailureAccessOutcome(failureReason);
-  const actionLabel =
-    accessOutcome === 'allowed' ? 'フィードへ進む' : 'アラームへ戻る';
 
   return (
     <ChallengeScreen dark timer={{ remainingMs: 0, status: 'expired' }}>
@@ -68,11 +60,10 @@ export default function QuizFailureScreen() {
           <Text style={challengeStyles.darkCaption}>
             {getFailureCopy(failureReason)}
           </Text>
-          {!!params.storagePath && <Text style={styles.storage}>保存済み</Text>}
         </View>
 
         <ActionButton
-          label={actionLabel}
+          label="アラームへ戻る"
           onPress={() => router.replace('/home')}
           variant="secondary"
         />
@@ -106,11 +97,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 46,
     fontWeight: '900',
-  },
-  storage: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-    textAlign: 'center',
   },
 });
