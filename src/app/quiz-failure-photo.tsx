@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { ActionButton, challengeStyles } from '@/components/wake-challenge-ui';
+import { recordFailureAccessOutcome } from '@/services/friends-feed-access';
 import { recordQuizFailurePhoto } from '@/services/quiz';
 import { getFailureAccessOutcome } from '@/services/wake-challenge-rules';
 import { clearWakeChallengeAttempt } from '@/services/wake-challenge-attempt';
@@ -71,6 +72,14 @@ export default function QuizFailurePhotoScreen() {
   const failureReason =
     uploadStatus === 'uploaded' ? 'quiz-timeout' : 'quiz-upload-failed';
   const accessOutcome = getFailureAccessOutcome(failureReason);
+
+  useEffect(() => {
+    if (uploadStatus === 'checking') {
+      return;
+    }
+
+    recordFailureAccessOutcome(failureReason).catch(() => {});
+  }, [failureReason, uploadStatus]);
   const actionLabel =
     accessOutcome === 'allowed' ? 'フィードへ進む' : 'アラームへ戻る';
 
