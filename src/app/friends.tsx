@@ -1,0 +1,272 @@
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ListRenderItem,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { BottomNav } from '@/components/bottom-nav';
+import { PROFILE_ICON_SOURCES } from '@/constants/profile-icons';
+import {
+  FriendServiceError,
+  listFriends,
+  type FriendProfile,
+} from '@/services/friend';
+
+function getFriendErrorMessage(error: unknown): string {
+  if (
+    error instanceof FriendServiceError &&
+    error.code === 'not_authenticated'
+  ) {
+    return 'ログイン状態を確認できませんでした。もう一度ログインしてください。';
+  }
+
+  return '友達情報を取得できませんでした。もう一度お試しください。';
+}
+
+export default function FriendsScreen() {
+  const [friends, setFriends] = useState<FriendProfile[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadFriends = useCallback(async () => {
+    setErrorMessage(null);
+    setIsRefreshing(true);
+
+    try {
+      setFriends(await listFriends());
+    } catch (error) {
+      setErrorMessage(getFriendErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    listFriends()
+      .then((nextFriends) => {
+        if (isActive) {
+          setFriends(nextFriends);
+        }
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          setErrorMessage(getFriendErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const renderItem: ListRenderItem<FriendProfile> = ({ item }) => (
+    <View style={styles.friendCard}>
+      <View style={styles.avatar}>
+        <Image
+          contentFit="cover"
+          source={PROFILE_ICON_SOURCES[item.iconId]}
+          style={styles.avatarImage}
+        />
+      </View>
+
+      <View style={styles.profileText}>
+        <Text style={styles.displayName}>{item.displayName}</Text>
+        <Text style={styles.userId}>@{item.userId}</Text>
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <Text style={styles.title}>友達</Text>
+        </View>
+
+        <View style={styles.content}>
+          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+
+          {isLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color="#171717" />
+              <Text style={styles.loadingText}>友達を読み込み中...</Text>
+            </View>
+          ) : (
+            <FlatList
+              contentContainerStyle={styles.friendList}
+              data={friends}
+              keyExtractor={(item) => item.relationId}
+              ListEmptyComponent={
+                <View style={styles.emptyBox}>
+                  <Text style={styles.emptyTitle}>まだ友達がいません</Text>
+                  <Text style={styles.emptyText}>
+                    右下のプラスボタンから友達を追加できます。
+                  </Text>
+                </View>
+              }
+              onRefresh={loadFriends}
+              refreshing={isRefreshing}
+              renderItem={renderItem}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </View>
+
+        <Pressable
+          accessibilityLabel="友達を追加"
+          accessibilityRole="button"
+          onPress={() => router.push('/add-friend')}
+          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+        >
+          <Text style={styles.fabText}>+</Text>
+        </Pressable>
+
+        <BottomNav activeRoute="/friends" />
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  screen: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    borderBottomColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    height: 61,
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  title: {
+    color: '#171717',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  errorText: {
+    color: '#b42318',
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 10,
+  },
+  loadingBox: {
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 44,
+  },
+  loadingText: {
+    color: '#737373',
+    fontSize: 14,
+  },
+  friendList: {
+    gap: 10,
+    paddingBottom: 116,
+  },
+  friendCard: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: '#f5f5f5',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 82,
+    padding: 12,
+  },
+  avatar: {
+    alignItems: 'center',
+    backgroundColor: '#e5e5e5',
+    borderRadius: 24,
+    height: 48,
+    justifyContent: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
+    width: 48,
+  },
+  avatarImage: {
+    height: '100%',
+    width: '100%',
+  },
+  profileText: {
+    flex: 1,
+  },
+  displayName: {
+    color: '#171717',
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  userId: {
+    color: '#737373',
+    fontSize: 13,
+  },
+  emptyBox: {
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 28,
+  },
+  emptyTitle: {
+    color: '#171717',
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  emptyText: {
+    color: '#737373',
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+  },
+  fab: {
+    alignItems: 'center',
+    backgroundColor: '#171717',
+    borderRadius: 28,
+    bottom: 88,
+    elevation: 8,
+    height: 56,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 24,
+    width: 56,
+    zIndex: 20,
+  },
+  fabPressed: {
+    opacity: 0.78,
+  },
+  fabText: {
+    color: '#ffffff',
+    fontSize: 36,
+    fontWeight: '300',
+    lineHeight: 40,
+    marginTop: -2,
+  },
+});

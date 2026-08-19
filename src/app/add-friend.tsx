@@ -1,4 +1,6 @@
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,16 +14,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BottomNav } from '@/components/bottom-nav';
 import { PROFILE_ICON_SOURCES } from '@/constants/profile-icons';
 import {
   FriendServiceError,
   addFriend,
-  listFriends,
   listFriendRelations,
   normalizeFriendSearchQuery,
   searchProfiles,
-  type FriendProfile,
   type FriendRelation,
   type FriendSearchProfile,
 } from '@/services/friend';
@@ -45,7 +44,6 @@ function getFriendErrorMessage(error: unknown): string {
 
 export default function AddFriendScreen() {
   const [query, setQuery] = useState('');
-  const [friends, setFriends] = useState<FriendProfile[]>([]);
   const [relations, setRelations] = useState<FriendRelation[]>([]);
   const [results, setResults] = useState<FriendSearchProfile[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -68,11 +66,10 @@ export default function AddFriendScreen() {
   useEffect(() => {
     let isActive = true;
 
-    Promise.all([listFriendRelations(), listFriends()])
-      .then(([nextRelations, nextFriends]) => {
+    listFriendRelations()
+      .then((nextRelations) => {
         if (isActive) {
           setRelations(nextRelations);
-          setFriends(nextFriends);
         }
       })
       .catch((error: unknown) => {
@@ -128,13 +125,6 @@ export default function AddFriendScreen() {
     try {
       const relation = await addFriend(profile.id);
       setRelations((currentRelations) => [relation, ...currentRelations]);
-      setFriends((currentFriends) => [
-        {
-          ...profile,
-          relationId: relation.id,
-        },
-        ...currentFriends,
-      ]);
       setSuccessMessage(`${profile.displayName}を友達に追加しました。`);
     } catch (error) {
       setErrorMessage(getFriendErrorMessage(error));
@@ -180,28 +170,25 @@ export default function AddFriendScreen() {
     );
   };
 
-  const renderFriendItem: ListRenderItem<FriendProfile> = ({ item }) => (
-    <View style={styles.friendCard}>
-      <View style={styles.avatar}>
-        <Image
-          contentFit="cover"
-          source={PROFILE_ICON_SOURCES[item.iconId]}
-          style={styles.avatarImage}
-        />
-      </View>
-
-      <View style={styles.profileText}>
-        <Text style={styles.displayName}>{item.displayName}</Text>
-        <Text style={styles.userId}>@{item.userId}</Text>
-      </View>
-    </View>
-  );
-
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Text style={styles.title}>友達</Text>
+          <Pressable
+            accessibilityLabel="友達一覧に戻る"
+            accessibilityRole="button"
+            hitSlop={12}
+            onPress={() => router.replace('/friends')}
+            style={styles.closeButton}
+          >
+            <SymbolView
+              name={{ ios: 'xmark', android: 'close', web: 'close' }}
+              size={24}
+              tintColor="#737373"
+              type="monochrome"
+            />
+          </Pressable>
+          <Text style={styles.title}>友達を追加</Text>
         </View>
 
         <View style={styles.content}>
@@ -263,33 +250,12 @@ export default function AddFriendScreen() {
                   {successMessage && (
                     <Text style={styles.successText}>{successMessage}</Text>
                   )}
-
-                  <Text style={styles.sectionTitle}>追加済みの友達</Text>
-                  <FlatList
-                    contentContainerStyle={styles.friendList}
-                    data={friends}
-                    horizontal
-                    keyExtractor={(item) => item.relationId}
-                    ListEmptyComponent={
-                      <View style={styles.emptyFriendBox}>
-                        <Text style={styles.emptyText}>
-                          まだ友達が追加されていません。
-                        </Text>
-                      </View>
-                    }
-                    renderItem={renderFriendItem}
-                    showsHorizontalScrollIndicator={false}
-                  />
-
-                  <Text style={styles.sectionTitle}>検索結果</Text>
                 </View>
               }
               renderItem={renderItem}
             />
           )}
         </View>
-
-        <BottomNav activeRoute="/add-friend" />
       </View>
     </SafeAreaView>
   );
@@ -305,11 +271,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   header: {
+    alignItems: 'center',
     borderBottomColor: '#f5f5f5',
     borderBottomWidth: 1,
-    height: 61,
+    flexDirection: 'row',
     justifyContent: 'center',
-    paddingHorizontal: 28,
+    minHeight: 61,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+  },
+  closeButton: {
+    alignItems: 'center',
+    height: 44,
+    justifyContent: 'center',
+    left: 18,
+    position: 'absolute',
+    width: 44,
   },
   title: {
     color: '#171717',
@@ -377,31 +354,9 @@ const styles = StyleSheet.create({
   listHeader: {
     paddingBottom: 4,
   },
-  sectionTitle: {
-    color: '#171717',
-    fontSize: 15,
-    fontWeight: '800',
-    marginBottom: 10,
-    marginTop: 20,
-  },
-  friendList: {
-    gap: 10,
-    paddingRight: 16,
-  },
-  friendCard: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: '#f5f5f5',
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    minHeight: 78,
-    padding: 12,
-    width: 220,
-  },
   resultList: {
     gap: 10,
-    paddingBottom: 116,
+    paddingBottom: 32,
   },
   resultCard: {
     alignItems: 'center',
@@ -467,14 +422,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     padding: 18,
-  },
-  emptyFriendBox: {
-    backgroundColor: '#fafafa',
-    borderColor: '#f1f1f1',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 18,
-    width: 220,
   },
   emptyText: {
     color: '#737373',
