@@ -1,6 +1,14 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import {
   GoogleLoginError,
@@ -62,15 +70,22 @@ export default function SigninScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.wordmarkArea}>
-          <Text style={styles.wordmark}>SLEEPY FACE</Text>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.logoArea}>
+          <Image
+            contentFit="cover"
+            source={require('@/assets/images/app-icon.png')}
+            style={styles.logo}
+          />
         </View>
 
         <View style={styles.header}>
-          <Text style={styles.title}>ログイン</Text>
+          <Text style={styles.title}>SleepyFace</Text>
           <Text style={styles.description}>
-            Googleアカウントでログインしてください。
+            クイズに失敗すると寝顔が友達に公開されるアラーム
           </Text>
         </View>
 
@@ -85,6 +100,7 @@ export default function SigninScreen() {
               isLoading && styles.buttonDisabled,
             ]}
           >
+            <Text style={styles.googleMark}>G</Text>
             <Text style={styles.googleButtonText}>
               {isLoading ? 'ログイン中...' : 'Googleでログイン'}
             </Text>
@@ -92,7 +108,7 @@ export default function SigninScreen() {
 
           {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -103,39 +119,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
   },
   container: {
-    flex: 1,
-    justifyContent: 'space-between',
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingTop: 64,
-    paddingBottom: 40,
+    paddingVertical: 40,
   },
-  wordmarkArea: {
+  logoArea: {
     alignItems: 'center',
   },
-  wordmark: {
-    color: '#171717',
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 1.6,
+  logo: {
+    borderRadius: 16,
+    height: 128,
+    width: 128,
   },
   header: {
     alignItems: 'center',
+    marginTop: 24,
   },
   title: {
     color: '#171717',
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '800',
-    marginBottom: 10,
+    marginBottom: 12,
     textAlign: 'center',
   },
   description: {
     color: '#737373',
     fontSize: 15,
-    lineHeight: 23,
+    lineHeight: 22,
     textAlign: 'center',
   },
   footer: {
     gap: 16,
+    marginTop: 40,
   },
   googleButton: {
     alignItems: 'center',
@@ -143,8 +159,10 @@ const styles = StyleSheet.create({
     borderColor: '#e5e5e5',
     borderRadius: 16,
     borderWidth: 2,
+    flexDirection: 'row',
+    gap: 12,
     justifyContent: 'center',
-    minHeight: 56,
+    minHeight: 62,
     paddingHorizontal: 20,
   },
   buttonPressed: {
@@ -152,6 +170,11 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  googleMark: {
+    color: '#171717',
+    fontSize: 20,
+    fontWeight: '800',
   },
   googleButtonText: {
     color: '#171717',
