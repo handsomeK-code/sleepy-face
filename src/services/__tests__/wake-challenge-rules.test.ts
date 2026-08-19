@@ -11,6 +11,7 @@ describe('Wake Up Challenge rules', () => {
     expect(getFailureAccessOutcome('no-photo-timeout')).toBe('blocked');
     expect(getFailureAccessOutcome('bad-photo-limit')).toBe('blocked');
     expect(getFailureAccessOutcome('quiz-upload-failed')).toBe('blocked');
+    expect(getFailureAccessOutcome('app-quit')).toBe('blocked');
   });
 
   it('allows Friends Feed Access for photo-backed Quiz Failure', () => {
@@ -21,6 +22,7 @@ describe('Wake Up Challenge rules', () => {
     expect(shouldRecordQuizFailurePhoto('quiz-timeout')).toBe(true);
     expect(shouldRecordQuizFailurePhoto('no-photo-timeout')).toBe(false);
     expect(shouldRecordQuizFailurePhoto('bad-photo-limit')).toBe(false);
+    expect(shouldRecordQuizFailurePhoto('app-quit')).toBe(false);
   });
 
   it('advances Bad Photo Attempt count without resetting the challenge', () => {

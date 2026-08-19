@@ -1,4 +1,5 @@
 export type WakeChallengeFailureReason =
+  | 'app-quit'
   | 'bad-photo-limit'
   | 'no-photo-timeout'
   | 'quiz-timeout'

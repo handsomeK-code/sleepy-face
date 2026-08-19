@@ -15,6 +15,7 @@ import { clearWakeChallengeAttempt } from '@/services/wake-challenge-attempt';
 
 function getFailureReason(reason?: string): WakeChallengeFailureReason {
   switch (reason) {
+    case 'app-quit':
     case 'bad-photo-limit':
     case 'no-photo-timeout':
     case 'quiz-timeout':
@@ -27,6 +28,8 @@ function getFailureReason(reason?: string): WakeChallengeFailureReason {
 
 function getFailureCopy(reason: WakeChallengeFailureReason) {
   switch (reason) {
+    case 'app-quit':
+      return 'チャレンジの途中でアプリが終了しました。今日はフィードを見られません。';
     case 'bad-photo-limit':
       return '顔写真を確認できなかったため、今日はフィードを見られません。';
     case 'no-photo-timeout':
