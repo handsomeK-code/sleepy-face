@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useAlarmTimer } from '@/services/alarm-timer';
 
@@ -32,27 +32,32 @@ export default function FaceCheckFailureScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.content}>
-        <View style={styles.icon}>
-          <Text style={styles.iconText}>×</Text>
-        </View>
-
-        <View style={styles.copy}>
-          <Text style={styles.title}>顔判定に失敗しました</Text>
-          <Text style={styles.caption}>もう一度顔写真を撮影してください</Text>
-        </View>
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        onPress={handleRetry}
-        style={({ pressed }) => [
-          styles.button,
-          pressed && styles.buttonPressed,
-        ]}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        style={styles.scroll}
       >
-        <Text style={styles.buttonText}>再度写真を撮影する</Text>
-      </Pressable>
+        <View style={styles.content}>
+          <View style={styles.icon}>
+            <Text style={styles.iconText}>×</Text>
+          </View>
+
+          <View style={styles.copy}>
+            <Text style={styles.title}>顔判定に失敗しました</Text>
+            <Text style={styles.caption}>もう一度顔写真を撮影してください</Text>
+          </View>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={handleRetry}
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.buttonPressed,
+          ]}
+        >
+          <Text style={styles.buttonText}>再度写真を撮影する</Text>
+        </Pressable>
+      </ScrollView>
     </View>
   );
 }
@@ -108,6 +113,12 @@ const styles = StyleSheet.create({
   screen: {
     backgroundColor: '#171717',
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     paddingBottom: 56,
     paddingHorizontal: 24,

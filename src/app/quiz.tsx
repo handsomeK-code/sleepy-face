@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
   ActionButton,
@@ -140,75 +140,83 @@ export default function QuizScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
-        <View style={styles.timerPill}>
-          <Text style={styles.timerPillText}>
-            あと {formatRemainingTime(timer)}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        style={styles.scroll}
+      >
+        <View style={styles.header}>
+          <View style={styles.timerPill}>
+            <Text style={styles.timerPillText}>
+              あと {formatRemainingTime(timer)}
+            </Text>
+          </View>
+
+          <Text style={styles.progress}>
+            {quizState.correctAnswerCount}/
+            {quizState.requiredCorrectAnswerCount}
           </Text>
+
+          {quizState.lastAnswerCorrect !== null && (
+            <Text
+              style={
+                quizState.lastAnswerCorrect
+                  ? styles.correctCue
+                  : styles.incorrectCue
+              }
+            >
+              {quizState.lastAnswerCorrect ? '正解!' : '不正解'}
+            </Text>
+          )}
         </View>
 
-        <Text style={styles.progress}>
-          {quizState.correctAnswerCount}/{quizState.requiredCorrectAnswerCount}
-        </Text>
+        <View style={styles.content}>
+          <View style={styles.questionGroup}>
+            <Text style={styles.prompt}>
+              {isActive ? quizState.question.prompt : 'CLEAR'}
+            </Text>
 
-        {quizState.lastAnswerCorrect !== null && (
-          <Text
-            style={
-              quizState.lastAnswerCorrect
-                ? styles.correctCue
-                : styles.incorrectCue
-            }
-          >
-            {quizState.lastAnswerCorrect ? '正解!' : '不正解'}
-          </Text>
-        )}
-      </View>
-
-      <View style={styles.content}>
-        <View style={styles.questionGroup}>
-          <Text style={styles.prompt}>
-            {isActive ? quizState.question.prompt : 'CLEAR'}
-          </Text>
-
-          <View style={styles.answerBox}>
-            <View style={styles.answerBoxSurface}>
-              <Text
-                style={answerText ? styles.inputText : styles.inputPlaceholder}
-              >
-                {answerText || '?'}
-              </Text>
+            <View style={styles.answerBox}>
+              <View style={styles.answerBoxSurface}>
+                <Text
+                  style={
+                    answerText ? styles.inputText : styles.inputPlaceholder
+                  }
+                >
+                  {answerText || '?'}
+                </Text>
+              </View>
+              <View style={styles.answerBoxUnderline} />
             </View>
-            <View style={styles.answerBoxUnderline} />
-          </View>
-        </View>
-
-        <View style={styles.keypadGroup}>
-          <View style={styles.grid}>
-            {KEYPAD_KEYS.map((key) => (
-              <Pressable
-                accessibilityRole="button"
-                key={key}
-                onPress={() => handleKeypadPress(key)}
-                style={({ pressed }) => [
-                  styles.gridCell,
-                  pressed && styles.gridCellPressed,
-                ]}
-              >
-                <Text style={styles.gridText}>{getKeypadKeyLabel(key)}</Text>
-              </Pressable>
-            ))}
           </View>
 
-          <ActionButton
-            disabled={!answerText.trim()}
-            label="回答する"
-            loading={isSubmitting}
-            onPress={handleSubmitAnswer}
-          />
+          <View style={styles.keypadGroup}>
+            <View style={styles.grid}>
+              {KEYPAD_KEYS.map((key) => (
+                <Pressable
+                  accessibilityRole="button"
+                  key={key}
+                  onPress={() => handleKeypadPress(key)}
+                  style={({ pressed }) => [
+                    styles.gridCell,
+                    pressed && styles.gridCellPressed,
+                  ]}
+                >
+                  <Text style={styles.gridText}>{getKeypadKeyLabel(key)}</Text>
+                </Pressable>
+              ))}
+            </View>
 
-          {!!errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+            <ActionButton
+              disabled={!answerText.trim()}
+              label="回答する"
+              loading={isSubmitting}
+              onPress={handleSubmitAnswer}
+            />
+
+            {!!errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+          </View>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -259,11 +267,12 @@ const styles = StyleSheet.create({
   },
   gridCell: {
     alignItems: 'center',
+    aspectRatio: 1,
     borderColor: '#f5f5f5',
     borderRightWidth: 1,
     borderTopWidth: 1,
-    height: 80,
     justifyContent: 'center',
+    minHeight: 56,
     width: '33.3333%',
   },
   gridCellPressed: {
@@ -319,6 +328,12 @@ const styles = StyleSheet.create({
   screen: {
     backgroundColor: '#ffffff',
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   timerPill: {
     alignItems: 'center',

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const QUIZ_START_COUNTDOWN_SECONDS = 5;
 
@@ -39,20 +39,25 @@ export default function FaceCheckSuccessScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.content}>
-        <View style={styles.icon}>
-          <Text style={styles.iconText}>✓</Text>
-        </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        style={styles.scroll}
+      >
+        <View style={styles.content}>
+          <View style={styles.icon}>
+            <Text style={styles.iconText}>✓</Text>
+          </View>
 
-        <View style={styles.copy}>
-          <Text style={styles.title}>顔判定ができました！</Text>
-          <Text style={styles.caption}>
-            {QUIZ_START_COUNTDOWN_SECONDS}秒後にクイズが開始します！
-          </Text>
-        </View>
+          <View style={styles.copy}>
+            <Text style={styles.title}>顔判定ができました！</Text>
+            <Text style={styles.caption}>
+              {QUIZ_START_COUNTDOWN_SECONDS}秒後にクイズが開始します！
+            </Text>
+          </View>
 
-        <Text style={styles.countdown}>{secondsRemaining}</Text>
-      </View>
+          <Text style={styles.countdown}>{secondsRemaining}</Text>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -96,6 +101,12 @@ const styles = StyleSheet.create({
   screen: {
     backgroundColor: '#171717',
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     paddingBottom: 56,
     paddingHorizontal: 24,
