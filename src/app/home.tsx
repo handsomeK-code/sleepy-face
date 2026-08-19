@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,7 +15,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomNav } from '@/components/bottom-nav';
 import { PROFILE_ICON_SOURCES } from '@/constants/profile-icons';
 import {
+  clearFriendsFeedAccessBlock,
   getFriendsFeedAccessState,
+  recordFailureAccessOutcome,
   type FriendsFeedAccessState,
 } from '@/services/friends-feed-access';
 import {
@@ -105,6 +108,17 @@ export default function HomeScreen() {
     }
   }, []);
 
+  // DEV-ONLY: lets us preview the blocked-state UI without a real Challenge Failure. Remove before ship.
+  const handleToggleDebugBlock = useCallback(async () => {
+    if (accessState === 'blocked') {
+      await clearFriendsFeedAccessBlock();
+    } else {
+      await recordFailureAccessOutcome('app-quit');
+    }
+
+    await handleRefresh();
+  }, [accessState, handleRefresh]);
+
   const renderItem: ListRenderItem<FriendsFeedItem> = ({ item }) => (
     <View style={styles.feedCard}>
       <View style={styles.feedCardHeader}>
@@ -135,6 +149,16 @@ export default function HomeScreen() {
       <View style={styles.screen}>
         <View style={styles.header}>
           <Text style={styles.title}>ホーム</Text>
+
+          {/* DEV-ONLY: no design, just to preview the blocked-state UI. Remove before ship. */}
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleToggleDebugBlock}
+          >
+            <Text style={styles.debugToggleText}>
+              [DEBUG] {accessState === 'blocked' ? '解除' : 'ブロック'}
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.content}>
@@ -196,16 +220,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   header: {
+    alignItems: 'center',
     borderBottomColor: '#f5f5f5',
     borderBottomWidth: 1,
+    flexDirection: 'row',
     height: 61,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 28,
   },
   title: {
     color: '#171717',
     fontSize: 20,
     fontWeight: '800',
+  },
+  debugToggleText: {
+    color: '#b42318',
+    fontSize: 12,
+    fontWeight: '700',
   },
   content: {
     flex: 1,
