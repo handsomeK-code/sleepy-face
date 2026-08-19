@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton, challengeStyles } from '@/components/wake-challenge-ui';
 import type { WakeChallengeFailureReason } from '@/services/wake-challenge-rules';
@@ -46,24 +46,26 @@ export default function QuizFailureScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.content}>
-        <View style={styles.icon}>
-          <Text style={styles.iconText}>×</Text>
-        </View>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.content}>
+          <View style={styles.icon}>
+            <Text style={styles.iconText}>×</Text>
+          </View>
 
-        <View style={styles.copy}>
-          <Text style={challengeStyles.darkTitle}>起床失敗</Text>
-          <Text style={challengeStyles.darkCaption}>
-            {getFailureCopy(failureReason)}
-          </Text>
-        </View>
+          <View style={styles.copy}>
+            <Text style={challengeStyles.darkTitle}>起床失敗</Text>
+            <Text style={challengeStyles.darkCaption}>
+              {getFailureCopy(failureReason)}
+            </Text>
+          </View>
 
-        <ActionButton
-          label="アラームへ戻る"
-          onPress={() => router.replace('/home')}
-          variant="secondary"
-        />
-      </View>
+          <ActionButton
+            label="アラームへ戻る"
+            onPress={() => router.replace('/home')}
+            variant="secondary"
+          />
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -78,6 +80,9 @@ const styles = StyleSheet.create({
   screen: {
     backgroundColor: '#171717',
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 32,
     paddingTop: 42,
   },
