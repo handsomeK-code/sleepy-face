@@ -195,10 +195,15 @@ export default function QuizScreen() {
           {isActive ? quizState.question.prompt : 'CLEAR'}
         </Text>
 
-        <View style={styles.input}>
-          <Text style={answerText ? styles.inputText : styles.inputPlaceholder}>
-            {answerText || '答え'}
-          </Text>
+        <View style={styles.answerBox}>
+          <View style={styles.answerBoxSurface}>
+            <Text
+              style={answerText ? styles.inputText : styles.inputPlaceholder}
+            >
+              {answerText || '?'}
+            </Text>
+          </View>
+          <View style={styles.answerBoxUnderline} />
         </View>
 
         <View style={styles.grid}>
@@ -232,6 +237,23 @@ export default function QuizScreen() {
 }
 
 const styles = StyleSheet.create({
+  answerBox: {
+    marginTop: 24,
+    width: '70%',
+  },
+  answerBoxSurface: {
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderRadius: 8,
+    justifyContent: 'center',
+    minHeight: 72,
+  },
+  answerBoxUnderline: {
+    backgroundColor: '#171717',
+    borderRadius: 2,
+    height: 4,
+    width: '100%',
+  },
   content: {
     flex: 1,
     gap: 16,
@@ -288,18 +310,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
-  input: {
-    alignItems: 'center',
-    backgroundColor: '#fafafa',
-    borderColor: '#d4d4d4',
-    borderRadius: 8,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 64,
-    paddingHorizontal: 18,
-  },
   inputPlaceholder: {
-    color: '#a3a3a3',
+    color: '#d4d4d4',
     fontSize: 28,
     fontWeight: '800',
   },
