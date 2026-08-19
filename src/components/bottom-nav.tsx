@@ -2,8 +2,7 @@ import { router, type Href } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-export type BottomNavRoute =
-  '/alarms' | '/home' | '/friends' | '/profile-setup';
+export type BottomNavRoute = '/alarms' | '/home' | '/friends' | '/profile';
 
 type BottomNavTab = {
   icon: SymbolViewProps['name'];
@@ -30,7 +29,7 @@ const BOTTOM_NAV_TABS: BottomNavTab[] = [
   {
     icon: { ios: 'gearshape', android: 'settings', web: 'settings' },
     label: '設定',
-    route: '/profile-setup',
+    route: '/profile',
   },
 ];
 
