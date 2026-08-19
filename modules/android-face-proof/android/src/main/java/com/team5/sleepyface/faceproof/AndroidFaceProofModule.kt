@@ -2,6 +2,7 @@ package com.team5.sleepyface.faceproof
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
@@ -9,6 +10,8 @@ import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.IOException
+
+private const val TAG = "AndroidFaceProof"
 
 class AndroidFaceProofModule : Module() {
   override fun definition() = ModuleDefinition {
@@ -26,6 +29,7 @@ class AndroidFaceProofModule : Module() {
     val imageUri = parseLocalFileUri(localPhotoUri)
 
     if (imageUri == null) {
+      Log.w(TAG, "invalid-photo: could not parse local file uri '$localPhotoUri'")
       promise.resolve(invalidPhotoResult())
       return
     }
@@ -33,19 +37,28 @@ class AndroidFaceProofModule : Module() {
     val appContext = context
 
     if (appContext == null) {
+      Log.w(TAG, "detector-error: no reactContext/currentActivity available")
       promise.resolve(detectorErrorResult())
       return
     }
 
     val image = try {
       InputImage.fromFilePath(appContext, imageUri)
-    } catch (_: IOException) {
+    } catch (e: IOException) {
+      Log.w(TAG, "invalid-photo: IOException reading '$imageUri'", e)
       promise.resolve(invalidPhotoResult())
       return
-    } catch (_: RuntimeException) {
+    } catch (e: RuntimeException) {
+      Log.w(TAG, "invalid-photo: RuntimeException reading '$imageUri'", e)
       promise.resolve(invalidPhotoResult())
       return
     }
+
+    Log.d(
+      TAG,
+      "checking face proof: uri=$imageUri width=${image.width} height=${image.height} " +
+        "rotation=${image.rotationDegrees}",
+    )
 
     val detector = FaceDetection.getClient(
       FaceDetectorOptions.Builder()
@@ -56,8 +69,10 @@ class AndroidFaceProofModule : Module() {
     detector.process(image)
       .addOnSuccessListener { faces ->
         if (faces.isEmpty()) {
+          Log.w(TAG, "no-face-detected: 0 faces found in '$imageUri'")
           promise.resolve(noFaceDetectedResult())
         } else {
+          Log.d(TAG, "passed: ${faces.size} face(s) found in '$imageUri'")
           promise.resolve(
             mapOf(
               "faceCount" to faces.size,
@@ -66,7 +81,8 @@ class AndroidFaceProofModule : Module() {
           )
         }
       }
-      .addOnFailureListener {
+      .addOnFailureListener { e ->
+        Log.e(TAG, "detector-error: ML Kit failed processing '$imageUri'", e)
         promise.resolve(detectorErrorResult())
       }
       .addOnCompleteListener {
