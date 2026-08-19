@@ -4,6 +4,7 @@ import {
   Animated,
   Easing,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -188,49 +189,51 @@ export default function RingingScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.timerPill}>
-        <Text style={styles.timerPillText}>
-          あと {formatRemainingTime(timer)}
-        </Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.timerPill}>
+          <Text style={styles.timerPillText}>
+            あと {formatRemainingTime(timer)}
+          </Text>
+        </View>
 
-      <View style={styles.content}>
-        <Text style={styles.wakeUpTime}>{wakeUpTime}</Text>
-        <Text style={styles.greeting}>おはよう！</Text>
-        <Text style={styles.caption}>
-          写真を撮影するとアラームを止められます
-        </Text>
+        <View style={styles.content}>
+          <Text style={styles.wakeUpTime}>{wakeUpTime}</Text>
+          <Text style={styles.greeting}>おはよう！</Text>
+          <Text style={styles.caption}>
+            写真を撮影するとアラームを止められます
+          </Text>
 
-        <Animated.View
-          style={[styles.cameraRing, { transform: [{ scale: pulse }] }]}
-        >
-          <View style={styles.cameraCircle}>
-            <View style={styles.cameraIcon}>
-              <View style={styles.cameraIconBump} />
-              <View style={styles.cameraIconBody}>
-                <View style={styles.cameraIconLens} />
+          <Animated.View
+            style={[styles.cameraRing, { transform: [{ scale: pulse }] }]}
+          >
+            <View style={styles.cameraCircle}>
+              <View style={styles.cameraIcon}>
+                <View style={styles.cameraIconBump} />
+                <View style={styles.cameraIconBody}>
+                  <View style={styles.cameraIconLens} />
+                </View>
               </View>
             </View>
-          </View>
-        </Animated.View>
-      </View>
+          </Animated.View>
+        </View>
 
-      <Pressable
-        accessibilityRole="button"
-        disabled={isStarting}
-        onPress={handleStartChallenge}
-        style={({ pressed }) => [
-          styles.button,
-          pressed && styles.buttonPressed,
-          isStarting && styles.buttonDisabled,
-        ]}
-      >
-        <Text style={styles.buttonText}>
-          {isStarting ? '起動中...' : '顔写真を撮る'}
-        </Text>
-      </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          disabled={isStarting}
+          onPress={handleStartChallenge}
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.buttonPressed,
+            isStarting && styles.buttonDisabled,
+          ]}
+        >
+          <Text style={styles.buttonText}>
+            {isStarting ? '起動中...' : '顔写真を撮る'}
+          </Text>
+        </Pressable>
 
-      {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+        {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+      </ScrollView>
     </View>
   );
 }
@@ -330,6 +333,9 @@ const styles = StyleSheet.create({
   screen: {
     backgroundColor: '#171717',
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     paddingBottom: 56,
     paddingHorizontal: 24,
