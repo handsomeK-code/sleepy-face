@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   ActionButton,
@@ -15,7 +15,38 @@ import {
   submitQuizAnswer,
   type QuizState,
 } from '@/services/quiz';
+import {
+  applyQuizKeypadInput,
+  type QuizKeypadKey,
+} from '@/services/quiz-keypad';
 import type { WakeChallengeFailureReason } from '@/services/wake-challenge-rules';
+
+const KEYPAD_KEYS: QuizKeypadKey[] = [
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  'clear',
+  '0',
+  'backspace',
+];
+
+function getKeypadKeyLabel(key: QuizKeypadKey): string {
+  if (key === 'clear') {
+    return 'C';
+  }
+
+  if (key === 'backspace') {
+    return '⌫';
+  }
+
+  return key;
+}
 
 function getErrorMessage(error: unknown) {
   if (error instanceof QuizServiceError) {
@@ -99,6 +130,14 @@ export default function QuizScreen() {
     timer?.status,
   ]);
 
+  function handleKeypadPress(key: QuizKeypadKey) {
+    if (isRecordingFailure) {
+      return;
+    }
+
+    setAnswerText((current) => applyQuizKeypadInput(current, key));
+  }
+
   function handleSubmitAnswer() {
     if (isSubmitting || timer?.status === 'expired') {
       return;
@@ -140,35 +179,33 @@ export default function QuizScreen() {
         </View>
 
         <View style={styles.grid}>
-          {Array.from({ length: 9 }, (_, index) => (
-            <View key={index} style={styles.gridCell}>
-              <Text style={styles.gridText}>{index + 1}</Text>
-            </View>
+          {KEYPAD_KEYS.map((key) => (
+            <Pressable
+              accessibilityRole="button"
+              disabled={isRecordingFailure}
+              key={key}
+              onPress={() => handleKeypadPress(key)}
+              style={({ pressed }) => [
+                styles.gridCell,
+                pressed && styles.gridCellPressed,
+              ]}
+            >
+              <Text style={styles.gridText}>{getKeypadKeyLabel(key)}</Text>
+            </Pressable>
           ))}
-          <View style={styles.gridCell}>
-            <Text style={styles.gridText}>C</Text>
-          </View>
-          <View style={styles.gridCell}>
-            <Text style={styles.gridText}>0</Text>
-          </View>
-          <View style={styles.gridCell}>
-            <Text style={styles.gridText}>⌫</Text>
-          </View>
         </View>
 
         <View style={styles.form}>
           <Text style={challengeStyles.lightCaption}>
             第{quizState.attemptNumber}問 {message}
           </Text>
-          <TextInput
-            editable={!isRecordingFailure}
-            keyboardType="number-pad"
-            onChangeText={setAnswerText}
-            placeholder="答え"
-            placeholderTextColor="#a3a3a3"
-            style={styles.input}
-            value={answerText}
-          />
+          <View style={styles.input}>
+            <Text
+              style={answerText ? styles.inputText : styles.inputPlaceholder}
+            >
+              {answerText || '答え'}
+            </Text>
+          </View>
           <ActionButton
             disabled={!answerText.trim() || isRecordingFailure}
             label={isRecordingFailure ? '失敗を記録中' : '回答する'}
@@ -205,22 +242,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '33.3333%',
   },
+  gridCellPressed: {
+    backgroundColor: '#f5f5f5',
+  },
   gridText: {
     color: '#171717',
     fontSize: 26,
     fontWeight: '800',
   },
   input: {
+    alignItems: 'center',
     backgroundColor: '#fafafa',
     borderColor: '#d4d4d4',
     borderRadius: 8,
     borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 64,
+    paddingHorizontal: 18,
+  },
+  inputPlaceholder: {
+    color: '#a3a3a3',
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  inputText: {
     color: '#171717',
     fontSize: 28,
     fontWeight: '800',
-    minHeight: 64,
-    paddingHorizontal: 18,
-    textAlign: 'center',
   },
   progress: {
     color: '#737373',
