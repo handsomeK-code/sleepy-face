@@ -4,8 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   ActionButton,
-  ChallengeScreen,
-  challengeStyles,
+  formatRemainingTime,
 } from '@/components/wake-challenge-ui';
 import { resumeTimer, useAlarmTimer } from '@/services/alarm-timer';
 import {
@@ -67,7 +66,7 @@ export default function QuizScreen() {
   const timer = useAlarmTimer();
   const [quizState, setQuizState] = useState<QuizState>(() => startQuiz());
   const [answerText, setAnswerText] = useState('');
-  const [message, setMessage] = useState('3問正解すると成功です。');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRecordingFailure, setIsRecordingFailure] = useState(false);
   const didHandleExpiry = useRef(false);
@@ -135,6 +134,7 @@ export default function QuizScreen() {
       return;
     }
 
+    setErrorMessage(null);
     setAnswerText((current) => applyQuizKeypadInput(current, key));
   }
 
@@ -144,6 +144,7 @@ export default function QuizScreen() {
     }
 
     setIsSubmitting(true);
+    setErrorMessage(null);
 
     try {
       const nextState = submitQuizAnswer(answerText);
@@ -154,10 +155,8 @@ export default function QuizScreen() {
         router.replace('/quiz-success');
         return;
       }
-
-      setMessage(nextState.lastAnswerCorrect ? '正解です。' : 'もう一問です。');
     } catch (error) {
-      setMessage(getErrorMessage(error));
+      setErrorMessage(getErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -166,15 +165,40 @@ export default function QuizScreen() {
   const isActive = quizState.status === 'active';
 
   return (
-    <ChallengeScreen timer={timer}>
-      <View style={styles.content}>
-        <View style={styles.question}>
-          <Text style={styles.progress}>
-            {quizState.correctAnswerCount}/
-            {quizState.requiredCorrectAnswerCount}
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <View style={styles.timerPill}>
+          <Text style={styles.timerPillText}>
+            あと {formatRemainingTime(timer)}
           </Text>
-          <Text style={styles.prompt}>
-            {isActive ? quizState.question.prompt : 'CLEAR'}
+        </View>
+
+        <Text style={styles.progress}>
+          {quizState.correctAnswerCount}/{quizState.requiredCorrectAnswerCount}
+        </Text>
+
+        {quizState.lastAnswerCorrect !== null && (
+          <Text
+            style={
+              quizState.lastAnswerCorrect
+                ? styles.correctCue
+                : styles.incorrectCue
+            }
+          >
+            {quizState.lastAnswerCorrect ? '正解!' : '不正解'}
+          </Text>
+        )}
+      </View>
+
+      <View style={styles.content}>
+        <Text style={styles.prompt}>
+          {isActive ? quizState.question.prompt : 'CLEAR'}
+        </Text>
+        <Text style={styles.attemptNumber}>第{quizState.attemptNumber}問</Text>
+
+        <View style={styles.input}>
+          <Text style={answerText ? styles.inputText : styles.inputPlaceholder}>
+            {answerText || '答え'}
           </Text>
         </View>
 
@@ -195,37 +219,45 @@ export default function QuizScreen() {
           ))}
         </View>
 
-        <View style={styles.form}>
-          <Text style={challengeStyles.lightCaption}>
-            第{quizState.attemptNumber}問 {message}
-          </Text>
-          <View style={styles.input}>
-            <Text
-              style={answerText ? styles.inputText : styles.inputPlaceholder}
-            >
-              {answerText || '答え'}
-            </Text>
-          </View>
-          <ActionButton
-            disabled={!answerText.trim() || isRecordingFailure}
-            label={isRecordingFailure ? '失敗を記録中' : '回答する'}
-            loading={isSubmitting || isRecordingFailure}
-            onPress={handleSubmitAnswer}
-          />
-        </View>
+        <ActionButton
+          disabled={!answerText.trim() || isRecordingFailure}
+          label={isRecordingFailure ? '失敗を記録中' : '回答する'}
+          loading={isSubmitting || isRecordingFailure}
+          onPress={handleSubmitAnswer}
+        />
+
+        {!!errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
       </View>
-    </ChallengeScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  attemptNumber: {
+    color: '#737373',
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
   content: {
     flex: 1,
-    gap: 24,
+    gap: 16,
     paddingBottom: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
   },
-  form: {
-    gap: 12,
+  correctCue: {
+    color: '#16a34a',
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  error: {
+    color: '#dc2626',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   grid: {
     borderColor: '#f5f5f5',
@@ -249,6 +281,19 @@ const styles = StyleSheet.create({
     color: '#171717',
     fontSize: 26,
     fontWeight: '800',
+  },
+  header: {
+    alignItems: 'center',
+    paddingBottom: 8,
+    paddingHorizontal: 24,
+    paddingTop: 56,
+  },
+  incorrectCue: {
+    color: '#dc2626',
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 4,
+    textAlign: 'center',
   },
   input: {
     alignItems: 'center',
@@ -274,6 +319,7 @@ const styles = StyleSheet.create({
     color: '#737373',
     fontSize: 16,
     fontWeight: '800',
+    marginTop: 12,
     textAlign: 'center',
   },
   prompt: {
@@ -283,12 +329,24 @@ const styles = StyleSheet.create({
     lineHeight: 48,
     textAlign: 'center',
   },
-  question: {
-    backgroundColor: '#fafafa',
-    borderBottomColor: '#171717',
-    borderBottomWidth: 4,
-    gap: 16,
-    minHeight: 120,
-    padding: 18,
+  screen: {
+    backgroundColor: '#ffffff',
+    flex: 1,
+  },
+  timerPill: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: '#f5f5f5',
+    borderColor: '#e5e5e5',
+    borderRadius: 24,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  timerPillText: {
+    color: '#171717',
+    fontSize: 17,
+    fontWeight: '800',
   },
 });
