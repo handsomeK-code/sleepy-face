@@ -1,13 +1,15 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-
 import {
-  ActionButton,
-  ALARM_TIMER_SECONDS,
-  ChallengeScreen,
-  challengeStyles,
-} from '@/components/wake-challenge-ui';
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
+import { ALARM_TIMER_SECONDS } from '@/components/wake-challenge-ui';
 import {
   AndroidAlarmMechanicsError,
   getRingingAlarmState,
@@ -54,17 +56,52 @@ function startRingingTimerIfNeeded(startedAt: string) {
   startTimerFromStartedAt(ALARM_TIMER_SECONDS, startedAt);
 }
 
+function formatWakeUpTime(startedAt: string): string {
+  const parsedMs = Date.parse(startedAt);
+  const date = Number.isFinite(parsedMs) ? new Date(parsedMs) : new Date();
+
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+
+  return `${hours}:${minutes}`;
+}
+
 export default function RingingScreen() {
   const params = useLocalSearchParams<{
     alarmId?: string;
     startedAt?: string;
   }>();
-  const timer = useAlarmTimer();
   const [ringingState, setRingingState] = useState<RingingAlarmState | null>(
     null,
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const timer = useAlarmTimer();
+  const [pulse] = useState(() => new Animated.Value(1));
+
+  useEffect(() => {
+    const heartbeat = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          duration: 550,
+          easing: Easing.out(Easing.quad),
+          toValue: 1.12,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          duration: 550,
+          easing: Easing.in(Easing.quad),
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.delay(400),
+      ]),
+    );
+
+    heartbeat.start();
+
+    return () => heartbeat.stop();
+  }, [pulse]);
 
   useEffect(() => {
     let isActive = true;
@@ -139,72 +176,158 @@ export default function RingingScreen() {
     }
   }
 
+  const wakeUpTime = formatWakeUpTime(
+    getStartedAt(ringingState, params.startedAt),
+  );
+
   return (
-    <ChallengeScreen dark timer={timer}>
+    <View style={styles.screen}>
       <View style={styles.content}>
-        <View style={styles.ring}>
-          <View style={styles.ringInner}>
-            <Text style={styles.cameraIcon}>□</Text>
+        <Text style={styles.wakeUpTime}>{wakeUpTime}</Text>
+        <Text style={styles.greeting}>おはよう！</Text>
+        <Text style={styles.caption}>
+          写真を撮影するとアラームを止められます
+        </Text>
+
+        <Animated.View
+          style={[styles.cameraRing, { transform: [{ scale: pulse }] }]}
+        >
+          <View style={styles.cameraCircle}>
+            <View style={styles.cameraIcon}>
+              <View style={styles.cameraIconBump} />
+              <View style={styles.cameraIconBody}>
+                <View style={styles.cameraIconLens} />
+              </View>
+            </View>
           </View>
-        </View>
-
-        <View style={styles.copy}>
-          <Text style={challengeStyles.darkTitle}>起きる時間です</Text>
-          <Text style={challengeStyles.darkCaption}>
-            写真とクイズで起床を証明してください
-          </Text>
-        </View>
-
-        <ActionButton
-          label="起床チャレンジを開始"
-          loading={isStarting}
-          onPress={handleStartChallenge}
-          variant="secondary"
-        />
-
-        {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+        </Animated.View>
       </View>
-    </ChallengeScreen>
+
+      <Pressable
+        accessibilityRole="button"
+        disabled={isStarting}
+        onPress={handleStartChallenge}
+        style={({ pressed }) => [
+          styles.button,
+          pressed && styles.buttonPressed,
+          isStarting && styles.buttonDisabled,
+        ]}
+      >
+        <Text style={styles.buttonText}>
+          {isStarting ? '起動中...' : '顔写真を撮る'}
+        </Text>
+      </Pressable>
+
+      {errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+    </View>
   );
 }
 
+const CAMERA_RING_SIZE = 96;
+const CAMERA_CIRCLE_SIZE = 72;
+
 const styles = StyleSheet.create({
-  cameraIcon: {
-    color: '#ffffff',
-    fontSize: 28,
+  button: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    justifyContent: 'center',
+    marginTop: 32,
+    minHeight: 68,
+    paddingHorizontal: 24,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonPressed: {
+    opacity: 0.85,
+  },
+  buttonText: {
+    color: '#171717',
+    fontSize: 18,
     fontWeight: '800',
   },
-  content: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingBottom: 64,
+  caption: {
+    color: '#a3a3a3',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 40,
+    textAlign: 'center',
   },
-  copy: {
-    gap: 12,
+  cameraCircle: {
+    alignItems: 'center',
+    backgroundColor: '#171717',
+    borderColor: '#ffffff',
+    borderRadius: CAMERA_CIRCLE_SIZE / 2,
+    borderWidth: 2,
+    height: CAMERA_CIRCLE_SIZE,
+    justifyContent: 'center',
+    width: CAMERA_CIRCLE_SIZE,
+  },
+  cameraIcon: {
+    alignItems: 'center',
+  },
+  cameraIconBody: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 4,
+    height: 20,
+    justifyContent: 'center',
+    width: 30,
+  },
+  cameraIconBump: {
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+    height: 5,
+    marginBottom: 1,
+    width: 12,
+  },
+  cameraIconLens: {
+    backgroundColor: '#171717',
+    borderRadius: 5,
+    height: 10,
+    width: 10,
+  },
+  cameraRing: {
+    alignItems: 'center',
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: CAMERA_RING_SIZE / 2,
+    borderWidth: 2,
+    height: CAMERA_RING_SIZE,
+    justifyContent: 'center',
+    width: CAMERA_RING_SIZE,
+  },
+  content: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
   },
   error: {
     color: '#fecaca',
     fontSize: 13,
     lineHeight: 18,
+    marginTop: 16,
     textAlign: 'center',
   },
-  ring: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 48,
-    borderWidth: 4,
-    height: 96,
-    justifyContent: 'center',
-    width: 96,
+  greeting: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 8,
   },
-  ringInner: {
-    alignItems: 'center',
-    borderColor: '#ffffff',
-    borderRadius: 31,
-    borderWidth: 2,
-    height: 62,
+  screen: {
+    backgroundColor: '#171717',
+    flex: 1,
     justifyContent: 'center',
-    width: 62,
+    paddingBottom: 56,
+    paddingHorizontal: 24,
+    paddingTop: 56,
+  },
+  wakeUpTime: {
+    color: '#ffffff',
+    fontSize: 52,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 12,
   },
 });
