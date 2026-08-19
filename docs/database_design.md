@@ -14,7 +14,7 @@ The current online Supabase setup is intentionally smaller than the full product
 - Use `profiles` for app profile data tied one-to-one to `auth.users`.
 - Use `display_name` in code and docs instead of `username`.
 - Keep `user_id` as the public immutable User ID for Friend Search.
-- Keep `icon_url` as an optional profile image field, even though profile icons are not required in the MVP UI.
+- Keep `icon_url` as the profile icon field; it stores one of the 8 known preset icon identifiers (`human`, `man`, `man2`, `woman`, `boy`, `child`, `old-man`, `grandmother`) chosen during Initial Setup, not an arbitrary uploaded image URL.
 - Use simple `photos` records for uploaded image URLs in the current schema.
 - Use `friends_relations` for directional friend relation rows in the current schema.
 - Use Supabase Storage bucket `failure-photos` for the current simple captured-photo upload flow.
@@ -31,7 +31,7 @@ One row per authenticated app user. The row ID is the Auth User ID from Supabase
 | `id`         | uuid        | primary key, references `auth.users(id)`               |
 | `user_id`    | varchar     | unique public User ID used for Friend Search           |
 | `display_name` | varchar  | required public Display Name                           |
-| `icon_url`   | varchar     | optional profile icon URL                              |
+| `icon_url`   | varchar     | required preset Profile Icon identifier (not a URL)    |
 | `created_at` | timestamptz | default `now()`                                        |
 
 Rules:
@@ -98,6 +98,7 @@ Inputs:
 | -------------- | ---- | ----------------------------- |
 | `user_id`      | text | public User ID                |
 | `display_name` | text | public Display Name           |
+| `icon_id`      | text | preset Profile Icon identifier |
 
 Success payload:
 
@@ -108,6 +109,7 @@ Success payload:
     "profile_id": "uuid",
     "user_id": "public-user-id",
     "display_name": "Display Name",
+    "icon_url": "icon-identifier",
     "created_at": "timestamp"
   }
 }
@@ -118,6 +120,7 @@ Error codes:
 - `not_authenticated`
 - `profile_already_created`
 - `user_id_already_taken`
+- `invalid_profile_input` (includes an unknown `icon_id`)
 
 ## Row Level Security
 

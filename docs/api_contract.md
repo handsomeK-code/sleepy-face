@@ -141,7 +141,8 @@ RPC:
 ```ts
 supabase.rpc("create_profile", {
   user_id: string,
-  display_name: string
+  display_name: string,
+  icon_id: string
 });
 ```
 
@@ -152,6 +153,7 @@ Successful data payload:
   profile_id: string;
   user_id: string;
   display_name: string;
+  icon_url: string;
   created_at: string;
 }
 ```
@@ -162,7 +164,8 @@ Rules:
 - `profile_id` is the Auth User ID.
 - `user_id` is the public User ID and must be unique.
 - `display_name` is required.
-- Public User ID and Display Name cannot be edited after setup in the MVP.
+- `icon_id` must be one of the 8 known preset icon identifiers (`human`, `man`, `man2`, `woman`, `boy`, `child`, `old-man`, `grandmother`); it is stored as-is in `icon_url`, which despite its column name holds a preset identifier rather than an arbitrary image URL.
+- Public User ID, Display Name, and the chosen icon cannot be edited after setup in the MVP.
 
 ### Get My Profile
 
