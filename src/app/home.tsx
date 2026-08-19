@@ -1,5 +1,325 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { Image } from 'expo-image';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ListRenderItem,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { BottomNav } from '@/components/bottom-nav';
+import { PROFILE_ICON_SOURCES } from '@/constants/profile-icons';
+import {
+  getFriendsFeedAccessState,
+  type FriendsFeedAccessState,
+} from '@/services/friends-feed-access';
+import {
+  HomeFeedServiceError,
+  listFriendsFeed,
+  type FriendsFeedItem,
+} from '@/services/home-feed';
+
+function getHomeFeedErrorMessage(error: unknown): string {
+  if (error instanceof HomeFeedServiceError) {
+    switch (error.code) {
+      case 'not_authenticated':
+        return 'ログイン状態を確認できませんでした。もう一度ログインしてください。';
+      case 'unexpected_error':
+        return 'フィードを読み込めませんでした。もう一度お試しください。';
+    }
+  }
+
+  return 'フィードを読み込めませんでした。もう一度お試しください。';
+}
+
+function formatFeedDate(isoDate: string): string {
+  const date = new Date(isoDate);
+
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+type HomeData = {
+  accessState: FriendsFeedAccessState;
+  feed: FriendsFeedItem[];
+};
+
+async function fetchHomeData(): Promise<HomeData> {
+  const accessState = await getFriendsFeedAccessState();
+  const feed = accessState === 'allowed' ? await listFriendsFeed() : [];
+
+  return { accessState, feed };
+}
 
 export default function HomeScreen() {
-  return <ScreenPlaceholder title="ホーム画面" />;
+  const [accessState, setAccessState] = useState<FriendsFeedAccessState | null>(
+    null,
+  );
+  const [feed, setFeed] = useState<FriendsFeedItem[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    fetchHomeData()
+      .then((data) => {
+        if (isActive) {
+          setAccessState(data.accessState);
+          setFeed(data.feed);
+        }
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          setErrorMessage(getHomeFeedErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setErrorMessage(null);
+    setIsRefreshing(true);
+
+    try {
+      const data = await fetchHomeData();
+
+      setAccessState(data.accessState);
+      setFeed(data.feed);
+    } catch (error) {
+      setErrorMessage(getHomeFeedErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  const renderItem: ListRenderItem<FriendsFeedItem> = ({ item }) => (
+    <View style={styles.feedCard}>
+      <View style={styles.feedCardHeader}>
+        <View style={styles.avatar}>
+          <Image
+            contentFit="cover"
+            source={PROFILE_ICON_SOURCES[item.iconId]}
+            style={styles.avatarImage}
+          />
+        </View>
+
+        <View style={styles.feedCardHeaderText}>
+          <Text style={styles.displayName}>{item.displayName}</Text>
+          <Text style={styles.feedDate}>{formatFeedDate(item.createdAt)}</Text>
+        </View>
+      </View>
+
+      <Image
+        contentFit="cover"
+        source={{ uri: item.imageUrl }}
+        style={styles.feedPhoto}
+      />
+    </View>
+  );
+
+  return (
+    <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <Text style={styles.title}>ホーム</Text>
+        </View>
+
+        <View style={styles.content}>
+          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+
+          {isLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color="#171717" />
+              <Text style={styles.loadingText}>フィードを読み込み中...</Text>
+            </View>
+          ) : accessState === 'blocked' ? (
+            <ScrollView
+              contentContainerStyle={styles.blockedScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.blockedBox}>
+                <Text style={styles.blockedTitle}>
+                  今日はフィードを見られません
+                </Text>
+                <Text style={styles.blockedText}>
+                  写真を残せなかったため、今日はフレンドのフィードを見られません。次のアラームで成功すると、また見られるようになります。
+                </Text>
+              </View>
+            </ScrollView>
+          ) : (
+            <FlatList
+              contentContainerStyle={styles.feedList}
+              data={feed}
+              keyExtractor={(item) => item.photoId}
+              ListEmptyComponent={
+                <View style={styles.emptyBox}>
+                  <Text style={styles.emptyTitle}>まだ投稿がありません</Text>
+                  <Text style={styles.emptyText}>
+                    友達を追加すると、ここにフィードが表示されます。
+                  </Text>
+                </View>
+              }
+              onRefresh={handleRefresh}
+              refreshing={isRefreshing}
+              renderItem={renderItem}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </View>
+
+        <BottomNav activeRoute="/home" />
+      </View>
+    </SafeAreaView>
+  );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  screen: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    borderBottomColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    height: 61,
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  title: {
+    color: '#171717',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  errorText: {
+    color: '#b42318',
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 10,
+  },
+  loadingBox: {
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 44,
+  },
+  loadingText: {
+    color: '#737373',
+    fontSize: 14,
+  },
+  blockedScrollContent: {
+    flexGrow: 1,
+    paddingBottom: 116,
+  },
+  blockedBox: {
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 32,
+  },
+  blockedTitle: {
+    color: '#171717',
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  blockedText: {
+    color: '#737373',
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+  },
+  feedList: {
+    gap: 16,
+    paddingBottom: 116,
+  },
+  feedCard: {
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  feedCardHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    padding: 14,
+  },
+  feedCardHeaderText: {
+    flex: 1,
+  },
+  avatar: {
+    alignItems: 'center',
+    backgroundColor: '#e5e5e5',
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    width: 40,
+  },
+  avatarImage: {
+    height: '100%',
+    width: '100%',
+  },
+  displayName: {
+    color: '#171717',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  feedDate: {
+    color: '#737373',
+    fontSize: 13,
+  },
+  feedPhoto: {
+    aspectRatio: 1,
+    backgroundColor: '#e5e5e5',
+    width: '100%',
+  },
+  emptyBox: {
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 28,
+  },
+  emptyTitle: {
+    color: '#171717',
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  emptyText: {
+    color: '#737373',
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+  },
+});

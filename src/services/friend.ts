@@ -70,6 +70,15 @@ function mapProfile(row: ProfileSearchRow): FriendSearchProfile {
   };
 }
 
+export function resolveFriendProfileId(
+  relation: FriendRelation,
+  profileId: string,
+): string {
+  return relation.profileId === profileId
+    ? relation.friendProfileId
+    : relation.profileId;
+}
+
 function mapFriendRelation(row: FriendRelationRow): FriendRelation {
   return {
     createdAt: row.created_at,
@@ -169,9 +178,7 @@ export async function listFriends(): Promise<FriendProfile[]> {
   const profileId = await getRequiredProfileId();
   const relations = await listFriendRelations();
   const friendProfileIds = relations.map((relation) =>
-    relation.profileId === profileId
-      ? relation.friendProfileId
-      : relation.profileId,
+    resolveFriendProfileId(relation, profileId),
   );
 
   if (friendProfileIds.length === 0) {

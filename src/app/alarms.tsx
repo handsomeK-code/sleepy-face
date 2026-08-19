@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BottomNav } from '@/components/bottom-nav';
 import {
   AlarmServiceError,
   listSavedAlarms,
@@ -30,36 +30,6 @@ const WEEKDAY_LABELS: Record<Weekday, string> = {
   6: '土',
 };
 const DISPLAY_WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5, 6, 0];
-const BOTTOM_TABS = [
-  {
-    icon: { ios: 'alarm', android: 'alarm', web: 'alarm' },
-    label: 'アラーム',
-    route: '/alarms',
-    isActive: true,
-  },
-  {
-    icon: { ios: 'house', android: 'home', web: 'home' },
-    label: 'ホーム',
-    route: '/home',
-    isActive: false,
-  },
-  {
-    icon: {
-      ios: 'person.badge.plus',
-      android: 'person_add',
-      web: 'person_add',
-    },
-    label: '友達',
-    route: '/add-friend',
-    isActive: false,
-  },
-  {
-    icon: { ios: 'gearshape', android: 'settings', web: 'settings' },
-    label: '設定',
-    route: '/profile-setup',
-    isActive: false,
-  },
-] as const;
 
 function formatTime(alarm: SavedAlarm): string {
   return `${String(alarm.hour).padStart(2, '0')}:${String(
@@ -291,31 +261,7 @@ export default function AlarmsScreen() {
           <Text style={styles.fabText}>+</Text>
         </Pressable>
 
-        <View style={styles.bottomNav}>
-          {BOTTOM_TABS.map((tab) => (
-            <Pressable
-              accessibilityRole="button"
-              key={tab.label}
-              onPress={() => router.navigate(tab.route)}
-              style={styles.bottomNavItem}
-            >
-              <SymbolView
-                name={tab.icon}
-                size={24}
-                tintColor={tab.isActive ? '#171717' : '#a3a3a3'}
-                type="monochrome"
-              />
-              <Text
-                style={[
-                  styles.bottomNavLabel,
-                  tab.isActive && styles.bottomNavLabelActive,
-                ]}
-              >
-                {tab.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <BottomNav activeRoute="/alarms" />
       </View>
     </SafeAreaView>
   );
@@ -484,35 +430,5 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     lineHeight: 40,
     marginTop: -2,
-  },
-  bottomNav: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderTopColor: '#f1f1f1',
-    borderTopWidth: 1,
-    bottom: 0,
-    flexDirection: 'row',
-    height: 74,
-    justifyContent: 'space-around',
-    left: 0,
-    paddingHorizontal: 12,
-    position: 'absolute',
-    right: 0,
-    zIndex: 10,
-  },
-  bottomNavItem: {
-    alignItems: 'center',
-    flex: 1,
-    gap: 6,
-    justifyContent: 'center',
-    minHeight: 54,
-  },
-  bottomNavLabel: {
-    color: '#a3a3a3',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  bottomNavLabelActive: {
-    color: '#171717',
   },
 });
