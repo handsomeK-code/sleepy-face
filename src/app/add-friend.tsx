@@ -96,7 +96,7 @@ export default function AddFriendScreen() {
 
     if (normalizedQuery.length < 2) {
       setResults([]);
-      setErrorMessage('ユーザーIDか表示名を2文字以上入力してください。');
+      setErrorMessage('ユーザーIDを2文字以上入力してください。');
       return;
     }
 
@@ -131,6 +131,42 @@ export default function AddFriendScreen() {
     } finally {
       setAddingProfileId(null);
     }
+  }, []);
+
+  // DEV-ONLY: injects a mock search result already marked as a friend (no Supabase write), to preview the disabled "追加済み" state. Remove before ship.
+  const handleAddMockExistingFriend = useCallback(() => {
+    const mockId = `mock-existing-${Date.now()}`;
+    const mockProfile: FriendSearchProfile = {
+      createdAt: new Date().toISOString(),
+      displayName: 'モック既存友達',
+      iconId: 'man2',
+      id: mockId,
+      userId: `mock_existing_${Date.now()}`,
+    };
+
+    setResults((currentResults) => [mockProfile, ...currentResults]);
+    setRelations((currentRelations) => [
+      {
+        createdAt: new Date().toISOString(),
+        friendProfileId: mockId,
+        id: `mock-relation-${Date.now()}`,
+        profileId: 'mock-self',
+      },
+      ...currentRelations,
+    ]);
+  }, []);
+
+  // DEV-ONLY: injects a mock search result not yet a friend (no Supabase write), to preview the active "追加" state. Remove before ship.
+  const handleAddMockSearchResult = useCallback(() => {
+    const mockProfile: FriendSearchProfile = {
+      createdAt: new Date().toISOString(),
+      displayName: 'モック検索結果',
+      iconId: 'woman',
+      id: `mock-result-${Date.now()}`,
+      userId: `mock_result_${Date.now()}`,
+    };
+
+    setResults((currentResults) => [mockProfile, ...currentResults]);
   }, []);
 
   const renderItem: ListRenderItem<FriendSearchProfile> = ({ item }) => {
@@ -212,8 +248,31 @@ export default function AddFriendScreen() {
               }
               ListHeaderComponent={
                 <View style={styles.listHeader}>
+                  {/* DEV-ONLY: no design, just to preview the search-result card states. __DEV__-gated so it never ships. */}
+                  {__DEV__ && (
+                    <View style={styles.debugButtonRow}>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={handleAddMockExistingFriend}
+                      >
+                        <Text style={styles.debugToggleText}>
+                          [DEBUG] +既存友達
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={handleAddMockSearchResult}
+                      >
+                        <Text style={styles.debugToggleText}>
+                          [DEBUG] +検索結果
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
+
                   <Text style={styles.description}>
-                    ユーザーIDまたは表示名で検索できます。
+                    ユーザーIDで検索できます。
                   </Text>
 
                   <TextInput
@@ -222,7 +281,7 @@ export default function AddFriendScreen() {
                     editable={!isSearching}
                     onChangeText={setQuery}
                     onSubmitEditing={handleSearch}
-                    placeholder="ユーザーID / 表示名"
+                    placeholder="ユーザーID"
                     placeholderTextColor="#a3a3a3"
                     returnKeyType="search"
                     style={styles.input}
@@ -353,6 +412,16 @@ const styles = StyleSheet.create({
   },
   listHeader: {
     paddingBottom: 4,
+  },
+  debugButtonRow: {
+    flexDirection: 'row',
+    gap: 14,
+    marginBottom: 14,
+  },
+  debugToggleText: {
+    color: '#b42318',
+    fontSize: 12,
+    fontWeight: '700',
   },
   resultList: {
     gap: 10,
