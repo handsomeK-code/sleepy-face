@@ -20,6 +20,9 @@ import {
   type FriendProfile,
 } from '@/services/friend';
 
+// Flip to true locally to use the dev-only debug tools below. Always false in committed code.
+const SHOW_DEBUG_TOOLS = false;
+
 function getFriendErrorMessage(error: unknown): string {
   if (
     error instanceof FriendServiceError &&
@@ -115,8 +118,8 @@ export default function FriendsScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>友達</Text>
 
-          {/* DEV-ONLY: no design, just to preview the friend-list UI. __DEV__-gated so it never ships. */}
-          {__DEV__ && (
+          {/* DEV-ONLY: no design, just to preview the friend-list UI. Flip SHOW_DEBUG_TOOLS to true locally to use it. */}
+          {SHOW_DEBUG_TOOLS && (
             <Pressable accessibilityRole="button" onPress={handleAddMockFriend}>
               <Text style={styles.debugToggleText}>[DEBUG] +友達</Text>
             </Pressable>

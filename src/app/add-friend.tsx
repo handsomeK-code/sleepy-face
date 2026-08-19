@@ -25,6 +25,9 @@ import {
   type FriendSearchProfile,
 } from '@/services/friend';
 
+// Flip to true locally to use the dev-only debug tools below. Always false in committed code.
+const SHOW_DEBUG_TOOLS = false;
+
 function getFriendErrorMessage(error: unknown): string {
   if (error instanceof FriendServiceError) {
     switch (error.code) {
@@ -248,8 +251,8 @@ export default function AddFriendScreen() {
               }
               ListHeaderComponent={
                 <View style={styles.listHeader}>
-                  {/* DEV-ONLY: no design, just to preview the search-result card states. __DEV__-gated so it never ships. */}
-                  {__DEV__ && (
+                  {/* DEV-ONLY: no design, just to preview the search-result card states. Flip SHOW_DEBUG_TOOLS to true locally to use it. */}
+                  {SHOW_DEBUG_TOOLS && (
                     <View style={styles.debugButtonRow}>
                       <Pressable
                         accessibilityRole="button"
