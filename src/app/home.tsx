@@ -140,7 +140,7 @@ export default function HomeScreen() {
   }, []);
 
   const renderItem: ListRenderItem<FriendsFeedItem> = ({ item }) => (
-    <View style={styles.feedCard}>
+    <View>
       <View style={styles.feedCardHeader}>
         <View style={styles.avatar}>
           <Image
@@ -322,18 +322,11 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingBottom: 116,
   },
-  feedCard: {
-    backgroundColor: '#fafafa',
-    borderColor: '#f1f1f1',
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
   feedCardHeader: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 12,
-    padding: 14,
+    paddingBottom: 10,
   },
   feedCardHeaderText: {
     flex: 1,
@@ -363,6 +356,7 @@ const styles = StyleSheet.create({
   feedPhoto: {
     aspectRatio: 1,
     backgroundColor: '#e5e5e5',
+    borderRadius: 16,
     width: '100%',
   },
   emptyBox: {
