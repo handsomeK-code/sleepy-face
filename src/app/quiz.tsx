@@ -194,7 +194,6 @@ export default function QuizScreen() {
         <Text style={styles.prompt}>
           {isActive ? quizState.question.prompt : 'CLEAR'}
         </Text>
-        <Text style={styles.attemptNumber}>第{quizState.attemptNumber}問</Text>
 
         <View style={styles.input}>
           <Text style={answerText ? styles.inputText : styles.inputPlaceholder}>
@@ -233,12 +232,6 @@ export default function QuizScreen() {
 }
 
 const styles = StyleSheet.create({
-  attemptNumber: {
-    color: '#737373',
-    fontSize: 14,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
   content: {
     flex: 1,
     gap: 16,
