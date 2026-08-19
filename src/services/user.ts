@@ -109,19 +109,23 @@ export function normalizePublicUserId(publicUserId: string): string {
   return publicUserId.trim().toLowerCase();
 }
 
-export function validateInitialSetupInput({
-  displayName,
-  publicUserId,
-}: CreateProfileInput): InitialSetupValidationResult {
-  const normalizedPublicUserId = normalizePublicUserId(publicUserId);
-  const trimmedDisplayName = displayName.trim();
+type DisplayNameValidationErrorCode =
+  'display_name_required' | 'display_name_too_long';
 
-  if (!PUBLIC_USER_ID_PATTERN.test(normalizedPublicUserId)) {
-    return {
-      code: 'public_user_id_invalid',
-      isValid: false,
+type DisplayNameValidationResult =
+  | {
+      isValid: true;
+      value: string;
+    }
+  | {
+      isValid: false;
+      code: DisplayNameValidationErrorCode;
     };
-  }
+
+// Shared by Initial Setup and the Profile screen's edit flow, which both apply the same
+// Display Name rules.
+function validateDisplayName(displayName: string): DisplayNameValidationResult {
+  const trimmedDisplayName = displayName.trim();
 
   if (trimmedDisplayName.length === 0) {
     return {
@@ -139,8 +143,33 @@ export function validateInitialSetupInput({
 
   return {
     isValid: true,
+    value: trimmedDisplayName,
+  };
+}
+
+export function validateInitialSetupInput({
+  displayName,
+  publicUserId,
+}: CreateProfileInput): InitialSetupValidationResult {
+  const normalizedPublicUserId = normalizePublicUserId(publicUserId);
+
+  if (!PUBLIC_USER_ID_PATTERN.test(normalizedPublicUserId)) {
+    return {
+      code: 'public_user_id_invalid',
+      isValid: false,
+    };
+  }
+
+  const displayNameResult = validateDisplayName(displayName);
+
+  if (!displayNameResult.isValid) {
+    return displayNameResult;
+  }
+
+  return {
+    isValid: true,
     value: {
-      displayName: trimmedDisplayName,
+      displayName: displayNameResult.value,
       publicUserId: normalizedPublicUserId,
     },
   };
