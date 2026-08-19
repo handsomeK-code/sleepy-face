@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -172,49 +173,51 @@ export default function FaceCheckScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.timerPill}>
-        <Text style={styles.timerPillText}>
-          あと {formatRemainingTime(timer)}
-        </Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.timerPill}>
+          <Text style={styles.timerPillText}>
+            あと {formatRemainingTime(timer)}
+          </Text>
+        </View>
 
-      <View style={styles.content}>
-        <View style={styles.iconRing}>
-          <View style={styles.iconCircle}>
-            <View style={styles.cameraIcon}>
-              <View style={styles.cameraIconBump} />
-              <View style={styles.cameraIconBody}>
-                <View style={styles.cameraIconLens} />
+        <View style={styles.content}>
+          <View style={styles.iconRing}>
+            <View style={styles.iconCircle}>
+              <View style={styles.cameraIcon}>
+                <View style={styles.cameraIconBump} />
+                <View style={styles.cameraIconBody}>
+                  <View style={styles.cameraIconLens} />
+                </View>
               </View>
             </View>
           </View>
+
+          <View style={styles.copy}>
+            <Text style={styles.title}>顔写真を撮影</Text>
+            <Text style={styles.caption}>{message}</Text>
+            <Text style={styles.attempts}>
+              失敗 {badPhotoAttempts}/{MAX_BAD_PHOTO_ATTEMPTS}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.copy}>
-          <Text style={styles.title}>顔写真を撮影</Text>
-          <Text style={styles.caption}>{message}</Text>
-          <Text style={styles.attempts}>
-            失敗 {badPhotoAttempts}/{MAX_BAD_PHOTO_ATTEMPTS}
-          </Text>
-        </View>
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        disabled={isBusy}
-        onPress={openCamera}
-        style={({ pressed }) => [
-          styles.button,
-          pressed && styles.buttonPressed,
-          isBusy && styles.buttonDisabled,
-        ]}
-      >
-        {isBusy ? (
-          <ActivityIndicator color="#171717" />
-        ) : (
-          <Text style={styles.buttonText}>カメラを起動</Text>
-        )}
-      </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          disabled={isBusy}
+          onPress={openCamera}
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.buttonPressed,
+            isBusy && styles.buttonDisabled,
+          ]}
+        >
+          {isBusy ? (
+            <ActivityIndicator color="#171717" />
+          ) : (
+            <Text style={styles.buttonText}>カメラを起動</Text>
+          )}
+        </Pressable>
+      </ScrollView>
     </View>
   );
 }
@@ -256,8 +259,9 @@ const styles = StyleSheet.create({
   cameraControls: {
     alignItems: 'center',
     backgroundColor: '#000000',
-    height: 160,
     justifyContent: 'center',
+    minHeight: 160,
+    paddingVertical: 24,
   },
   cameraTimer: {
     color: '#ffffff',
@@ -341,6 +345,9 @@ const styles = StyleSheet.create({
   screen: {
     backgroundColor: '#171717',
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     paddingBottom: 56,
     paddingHorizontal: 24,
