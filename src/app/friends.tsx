@@ -75,6 +75,23 @@ export default function FriendsScreen() {
     };
   }, []);
 
+  // DEV-ONLY: injects a mock friend card (no Supabase write) so the list layout can be previewed with content. Remove before ship.
+  const handleAddMockFriend = useCallback(() => {
+    const mockId = `mock-friend-${Date.now()}`;
+
+    setFriends((currentFriends) => [
+      {
+        createdAt: new Date().toISOString(),
+        displayName: 'モック友達',
+        iconId: 'old-man',
+        id: mockId,
+        relationId: mockId,
+        userId: `mock_friend_${Date.now()}`,
+      },
+      ...currentFriends,
+    ]);
+  }, []);
+
   const renderItem: ListRenderItem<FriendProfile> = ({ item }) => (
     <View style={styles.friendCard}>
       <View style={styles.avatar}>
@@ -97,6 +114,13 @@ export default function FriendsScreen() {
       <View style={styles.screen}>
         <View style={styles.header}>
           <Text style={styles.title}>友達</Text>
+
+          {/* DEV-ONLY: no design, just to preview the friend-list UI. __DEV__-gated so it never ships. */}
+          {__DEV__ && (
+            <Pressable accessibilityRole="button" onPress={handleAddMockFriend}>
+              <Text style={styles.debugToggleText}>[DEBUG] +友達</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.content}>
@@ -153,16 +177,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   header: {
+    alignItems: 'center',
     borderBottomColor: '#f5f5f5',
     borderBottomWidth: 1,
+    flexDirection: 'row',
     height: 61,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 28,
   },
   title: {
     color: '#171717',
     fontSize: 20,
     fontWeight: '800',
+  },
+  debugToggleText: {
+    color: '#b42318',
+    fontSize: 12,
+    fontWeight: '700',
   },
   content: {
     flex: 1,
