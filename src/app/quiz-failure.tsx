@@ -2,11 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import {
-  ActionButton,
-  ChallengeScreen,
-  challengeStyles,
-} from '@/components/wake-challenge-ui';
+import { ActionButton, challengeStyles } from '@/components/wake-challenge-ui';
 import type { WakeChallengeFailureReason } from '@/services/wake-challenge-rules';
 import { clearWakeChallengeAttempt } from '@/services/wake-challenge-attempt';
 
@@ -49,7 +45,7 @@ export default function QuizFailureScreen() {
   const failureReason = getFailureReason(params.reason);
 
   return (
-    <ChallengeScreen dark timer={{ remainingMs: 0, status: 'expired' }}>
+    <View style={styles.screen}>
       <View style={styles.content}>
         <View style={styles.icon}>
           <Text style={styles.iconText}>×</Text>
@@ -68,7 +64,7 @@ export default function QuizFailureScreen() {
           variant="secondary"
         />
       </View>
-    </ChallengeScreen>
+    </View>
   );
 }
 
@@ -78,6 +74,12 @@ const styles = StyleSheet.create({
     gap: 38,
     justifyContent: 'center',
     paddingBottom: 48,
+  },
+  screen: {
+    backgroundColor: '#171717',
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingTop: 42,
   },
   copy: {
     gap: 12,

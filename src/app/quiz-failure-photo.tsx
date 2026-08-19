@@ -2,11 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
-import {
-  ActionButton,
-  ChallengeScreen,
-  challengeStyles,
-} from '@/components/wake-challenge-ui';
+import { ActionButton, challengeStyles } from '@/components/wake-challenge-ui';
 import {
   getFailureAccessOutcome,
   type WakeChallengeFailureReason,
@@ -49,7 +45,7 @@ export default function QuizFailurePhotoScreen() {
     accessOutcome === 'allowed' ? 'フィードへ進む' : 'アラームへ戻る';
 
   return (
-    <ChallengeScreen timer={{ remainingMs: 0, status: 'expired' }}>
+    <View style={styles.screen}>
       <View style={styles.content}>
         <View style={styles.icon}>
           <Text style={styles.iconText}>×</Text>
@@ -75,7 +71,7 @@ export default function QuizFailurePhotoScreen() {
           onPress={() => router.replace('/home')}
         />
       </View>
-    </ChallengeScreen>
+    </View>
   );
 }
 
@@ -85,6 +81,12 @@ const styles = StyleSheet.create({
     gap: 32,
     justifyContent: 'center',
     paddingBottom: 48,
+  },
+  screen: {
+    backgroundColor: '#ffffff',
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingTop: 42,
   },
   copy: {
     gap: 12,

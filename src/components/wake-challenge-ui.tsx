@@ -1,11 +1,4 @@
-import type { ReactNode } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 import type { AlarmTimerState } from '@/services/alarm-timer';
 
@@ -19,36 +12,6 @@ export function formatRemainingTime(timer: AlarmTimerState | null): string {
   const seconds = totalSeconds % 60;
 
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
-type ChallengeScreenProps = {
-  children: ReactNode;
-  dark?: boolean;
-  timer: AlarmTimerState | null;
-};
-
-export function ChallengeScreen({
-  children,
-  dark = false,
-  timer,
-}: ChallengeScreenProps) {
-  return (
-    <View
-      style={[styles.screen, dark ? styles.screenDark : styles.screenLight]}
-    >
-      <View style={styles.phone}>
-        <View style={styles.statusPill}>
-          <Text style={styles.statusText}>ALARM</Text>
-        </View>
-        <Text
-          style={[styles.timer, dark ? styles.timerDark : styles.timerLight]}
-        >
-          {formatRemainingTime(timer)}
-        </Text>
-        {children}
-      </View>
-    </View>
-  );
 }
 
 type ActionButtonProps = {
@@ -143,25 +106,11 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
   },
-  phone: {
-    flex: 1,
-    paddingHorizontal: 32,
-    paddingTop: 42,
-  },
   primaryButton: {
     backgroundColor: '#171717',
   },
   primaryButtonText: {
     color: '#ffffff',
-  },
-  screen: {
-    flex: 1,
-  },
-  screenDark: {
-    backgroundColor: '#171717',
-  },
-  screenLight: {
-    backgroundColor: '#ffffff',
   },
   secondaryButton: {
     backgroundColor: '#ffffff',
@@ -169,36 +118,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   secondaryButtonText: {
-    color: '#171717',
-  },
-  statusPill: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: 'rgba(23, 23, 23, 0.8)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 17,
-    borderWidth: 1,
-    height: 34,
-    justifyContent: 'center',
-    marginBottom: 48,
-    width: 172,
-  },
-  statusText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  timer: {
-    fontSize: 54,
-    fontWeight: '900',
-    lineHeight: 62,
-    marginBottom: 38,
-    textAlign: 'center',
-  },
-  timerDark: {
-    color: '#ffffff',
-  },
-  timerLight: {
     color: '#171717',
   },
 });

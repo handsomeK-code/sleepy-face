@@ -2,11 +2,7 @@ import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import {
-  ActionButton,
-  ChallengeScreen,
-  challengeStyles,
-} from '@/components/wake-challenge-ui';
+import { ActionButton, challengeStyles } from '@/components/wake-challenge-ui';
 import { clearWakeChallengeAttempt } from '@/services/wake-challenge-attempt';
 
 export default function QuizSuccessScreen() {
@@ -15,7 +11,7 @@ export default function QuizSuccessScreen() {
   }, []);
 
   return (
-    <ChallengeScreen timer={{ remainingMs: 0, status: 'expired' }}>
+    <View style={styles.screen}>
       <View style={styles.content}>
         <View style={styles.icon}>
           <Text style={styles.iconText}>✓</Text>
@@ -33,7 +29,7 @@ export default function QuizSuccessScreen() {
           onPress={() => router.replace('/home')}
         />
       </View>
-    </ChallengeScreen>
+    </View>
   );
 }
 
@@ -43,6 +39,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 38,
     paddingBottom: 48,
+  },
+  screen: {
+    backgroundColor: '#ffffff',
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingTop: 42,
   },
   copy: {
     gap: 12,
