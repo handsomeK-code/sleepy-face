@@ -85,7 +85,7 @@ describe('friend service', () => {
       {
         createdAt: '2026-08-18T00:00:00.000Z',
         displayName: 'Sleepy Friend',
-        iconUrl: null,
+        iconId: 'human',
         id: 'profile-b',
         userId: 'sleepy-friend',
       },
@@ -162,7 +162,7 @@ describe('friend service', () => {
       {
         createdAt: '2026-08-18T00:00:00.000Z',
         displayName: 'Sleepy Friend',
-        iconUrl: null,
+        iconId: 'human',
         id: 'profile-b',
         relationId: 'relation-1',
         userId: 'sleepy-friend',
