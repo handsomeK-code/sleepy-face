@@ -285,9 +285,8 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     flex: 1,
-    gap: 40,
+    gap: 56,
     justifyContent: 'center',
-    paddingBottom: 48,
   },
   copy: {
     gap: 10,
