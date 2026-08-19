@@ -63,30 +63,35 @@ export default function SigninScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+        <View style={styles.wordmarkArea}>
+          <Text style={styles.wordmark}>SLEEPY FACE</Text>
+        </View>
+
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>SLEEPY FACE</Text>
           <Text style={styles.title}>ログイン</Text>
           <Text style={styles.description}>
             Googleアカウントでログインしてください。
           </Text>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          disabled={isLoading}
-          onPress={handleGoogleLogin}
-          style={({ pressed }) => [
-            styles.googleButton,
-            pressed && styles.buttonPressed,
-            isLoading && styles.buttonDisabled,
-          ]}
-        >
-          <Text style={styles.googleButtonText}>
-            {isLoading ? 'ログイン中...' : 'Googleでログイン'}
-          </Text>
-        </Pressable>
+        <View style={styles.footer}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isLoading}
+            onPress={handleGoogleLogin}
+            style={({ pressed }) => [
+              styles.googleButton,
+              pressed && styles.buttonPressed,
+              isLoading && styles.buttonDisabled,
+            ]}
+          >
+            <Text style={styles.googleButtonText}>
+              {isLoading ? 'ログイン中...' : 'Googleでログイン'}
+            </Text>
+          </Pressable>
 
-        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -95,50 +100,61 @@ export default function SigninScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f7fb',
+    backgroundColor: '#fafafa',
   },
   container: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 24,
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 64,
+    paddingBottom: 40,
+  },
+  wordmarkArea: {
+    alignItems: 'center',
+  },
+  wordmark: {
+    color: '#171717',
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 1.6,
   },
   header: {
-    marginBottom: 28,
-  },
-  eyebrow: {
-    color: '#536dfe',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1.6,
-    marginBottom: 10,
+    alignItems: 'center',
   },
   title: {
-    color: '#172033',
-    fontSize: 32,
+    color: '#171717',
+    fontSize: 28,
     fontWeight: '800',
     marginBottom: 10,
+    textAlign: 'center',
   },
   description: {
-    color: '#657086',
+    color: '#737373',
     fontSize: 15,
     lineHeight: 23,
+    textAlign: 'center',
+  },
+  footer: {
+    gap: 16,
   },
   googleButton: {
     alignItems: 'center',
-    backgroundColor: '#172033',
+    backgroundColor: '#fafafa',
+    borderColor: '#e5e5e5',
     borderRadius: 16,
+    borderWidth: 2,
     justifyContent: 'center',
     minHeight: 56,
     paddingHorizontal: 20,
   },
   buttonPressed: {
-    opacity: 0.82,
-  },
-  buttonDisabled: {
     opacity: 0.6,
   },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
   googleButtonText: {
-    color: '#ffffff',
+    color: '#171717',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -146,6 +162,6 @@ const styles = StyleSheet.create({
     color: '#b42318',
     fontSize: 14,
     lineHeight: 21,
-    marginTop: 16,
+    textAlign: 'center',
   },
 });
