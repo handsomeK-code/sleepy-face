@@ -27,6 +27,7 @@ const screens = [
   { href: '/quiz', label: '起床クイズ画面' },
   { href: '/quiz-success', label: 'クイズ成功画面' },
   { href: '/quiz-failure', label: 'クイズ失敗画面' },
+  { href: '/quiz-failure-photo', label: 'クイズ失敗画面（写真あり）' },
 ] as const;
 
 export default function Index() {
