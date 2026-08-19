@@ -25,6 +25,7 @@ import {
   shouldRetainFaceProofPhoto,
 } from '@/services/face-proof';
 import {
+  debugSnapshotBeforeDelete,
   deleteFailurePhotoLocally,
   saveFailurePhotoLocally,
 } from '@/services/wakeChallenge';
@@ -111,6 +112,7 @@ export default function FaceCheckScreen() {
         return;
       }
 
+      await debugSnapshotBeforeDelete(savedPhoto.uri);
       await deleteFailurePhotoLocally(savedPhoto.uri);
 
       const nextBadPhotoAttempts =
