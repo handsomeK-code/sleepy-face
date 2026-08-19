@@ -3,6 +3,11 @@ import { useEffect } from 'react';
 
 import { getCurrentUserId } from '@/services/auth';
 import { getMyProfile } from '@/services/user';
+import {
+  clearWakeChallengeAttempt,
+  getAbandonedWakeChallengeAttemptOutcome,
+  getWakeChallengeAttempt,
+} from '@/services/wake-challenge-attempt';
 
 const DEV_INDEX_ROUTE = '/';
 const DEV_TEST_ROUTES = new Set([
@@ -24,6 +29,36 @@ function shouldSkipProfileGate(pathname: string): boolean {
   return pathname === DEV_INDEX_ROUTE || DEV_TEST_ROUTES.has(pathname);
 }
 
+let hasCheckedAbandonedWakeChallengeAttempt = false;
+
+async function checkAbandonedWakeChallengeAttempt(
+  isStillActive: () => boolean,
+) {
+  if (hasCheckedAbandonedWakeChallengeAttempt) {
+    return;
+  }
+
+  hasCheckedAbandonedWakeChallengeAttempt = true;
+
+  const record = await getWakeChallengeAttempt();
+  const outcome = getAbandonedWakeChallengeAttemptOutcome(record);
+
+  if (!outcome.abandoned) {
+    return;
+  }
+
+  await clearWakeChallengeAttempt();
+
+  if (!isStillActive()) {
+    return;
+  }
+
+  router.replace({
+    pathname: '/quiz-failure',
+    params: { reason: 'app-quit' },
+  });
+}
+
 export default function RootLayout() {
   const pathname = usePathname();
 
@@ -31,6 +66,12 @@ export default function RootLayout() {
     let isActive = true;
 
     async function protectRoute() {
+      await checkAbandonedWakeChallengeAttempt(() => isActive);
+
+      if (!isActive) {
+        return;
+      }
+
       if (shouldSkipProfileGate(pathname)) {
         return;
       }

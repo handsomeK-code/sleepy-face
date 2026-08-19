@@ -109,6 +109,30 @@ export async function getLatestFailurePhoto() {
   };
 }
 
+const DEBUG_LAST_FAILED_FACE_PROOF_PATH = `${FileSystem.documentDirectory ?? ''}debug-last-failed-face-proof.jpg`;
+
+// TEMPORARY diagnostic aid for face-proof-keeps-failing investigation; remove once resolved.
+export async function debugSnapshotBeforeDelete(localPhotoUri: string) {
+  try {
+    const existing = await FileSystem.getInfoAsync(
+      DEBUG_LAST_FAILED_FACE_PROOF_PATH,
+    );
+
+    if (existing.exists) {
+      await FileSystem.deleteAsync(DEBUG_LAST_FAILED_FACE_PROOF_PATH, {
+        idempotent: true,
+      });
+    }
+
+    await FileSystem.copyAsync({
+      from: localPhotoUri,
+      to: DEBUG_LAST_FAILED_FACE_PROOF_PATH,
+    });
+  } catch {
+    // Best-effort diagnostic snapshot only; never block the real delete flow.
+  }
+}
+
 export async function deleteFailurePhotoLocally(localPhotoUri: string) {
   const localPhoto = await FileSystem.getInfoAsync(localPhotoUri);
 

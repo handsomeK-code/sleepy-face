@@ -81,8 +81,16 @@ export async function checkFaceProofWithDetector(
   }
 
   try {
-    return normalizeNativeResult(await detector.checkFaceProof(localPhotoUri));
-  } catch {
+    const nativeResult = await detector.checkFaceProof(localPhotoUri);
+
+    if (nativeResult.status === 'failed') {
+      console.warn('[face-proof] native check failed', nativeResult);
+    }
+
+    return normalizeNativeResult(nativeResult);
+  } catch (error) {
+    console.warn('[face-proof] native check threw', error);
+
     return {
       reason: 'detector-error',
       status: 'failed',
