@@ -9,7 +9,10 @@ import {
   View,
 } from 'react-native';
 
-import { ALARM_TIMER_SECONDS } from '@/components/wake-challenge-ui';
+import {
+  ALARM_TIMER_SECONDS,
+  formatRemainingTime,
+} from '@/components/wake-challenge-ui';
 import {
   AndroidAlarmMechanicsError,
   getRingingAlarmState,
@@ -182,6 +185,12 @@ export default function RingingScreen() {
 
   return (
     <View style={styles.screen}>
+      <View style={styles.timerPill}>
+        <Text style={styles.timerPillText}>
+          あと {formatRemainingTime(timer)}
+        </Text>
+      </View>
+
       <View style={styles.content}>
         <Text style={styles.wakeUpTime}>{wakeUpTime}</Text>
         <Text style={styles.greeting}>おはよう！</Text>
@@ -322,6 +331,22 @@ const styles = StyleSheet.create({
     paddingBottom: 56,
     paddingHorizontal: 24,
     paddingTop: 56,
+  },
+  timerPill: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 17,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  timerPillText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
   },
   wakeUpTime: {
     color: '#ffffff',
