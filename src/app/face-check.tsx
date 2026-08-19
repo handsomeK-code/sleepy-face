@@ -11,10 +11,7 @@ import {
 } from 'react-native';
 
 import {
-  ActionButton,
-  ChallengeScreen,
   MAX_BAD_PHOTO_ATTEMPTS,
-  challengeStyles,
   formatRemainingTime,
 } from '@/components/wake-challenge-ui';
 import {
@@ -187,33 +184,51 @@ export default function FaceCheckScreen() {
   }
 
   return (
-    <ChallengeScreen dark timer={timer}>
+    <View style={styles.screen}>
+      <View style={styles.timerPill}>
+        <Text style={styles.timerPillText}>
+          あと {formatRemainingTime(timer)}
+        </Text>
+      </View>
+
       <View style={styles.content}>
-        <View style={styles.iconCircle}>
-          <View style={styles.cameraIcon}>
-            <View style={styles.cameraIconBump} />
-            <View style={styles.cameraIconBody}>
-              <View style={styles.cameraIconLens} />
+        <View style={styles.iconRing}>
+          <View style={styles.iconCircle}>
+            <View style={styles.cameraIcon}>
+              <View style={styles.cameraIconBump} />
+              <View style={styles.cameraIconBody}>
+                <View style={styles.cameraIconLens} />
+              </View>
             </View>
           </View>
         </View>
 
         <View style={styles.copy}>
-          <Text style={challengeStyles.darkTitle}>顔写真を撮影</Text>
-          <Text style={challengeStyles.darkCaption}>{message}</Text>
+          <Text style={styles.title}>顔写真を撮影</Text>
+          <Text style={styles.caption}>{message}</Text>
           <Text style={styles.attempts}>
             失敗 {badPhotoAttempts}/{MAX_BAD_PHOTO_ATTEMPTS}
           </Text>
         </View>
-
-        <ActionButton
-          label="カメラを起動"
-          loading={isBusy}
-          onPress={openCamera}
-          variant="secondary"
-        />
       </View>
-    </ChallengeScreen>
+
+      <Pressable
+        accessibilityRole="button"
+        disabled={isBusy}
+        onPress={openCamera}
+        style={({ pressed }) => [
+          styles.button,
+          pressed && styles.buttonPressed,
+          isBusy && styles.buttonDisabled,
+        ]}
+      >
+        {isBusy ? (
+          <ActivityIndicator color="#171717" />
+        ) : (
+          <Text style={styles.buttonText}>カメラを起動</Text>
+        )}
+      </Pressable>
+    </View>
   );
 }
 
@@ -224,11 +239,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
+  button: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    justifyContent: 'center',
+    marginTop: 32,
+    minHeight: 68,
+    paddingHorizontal: 24,
+  },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonPressed: {
     opacity: 0.8,
+  },
+  buttonText: {
+    color: '#171717',
+    fontSize: 18,
+    fontWeight: '800',
   },
   camera: {
     flex: 1,
@@ -258,6 +287,12 @@ const styles = StyleSheet.create({
     top: 0,
     zIndex: 1,
   },
+  caption: {
+    color: '#a3a3a3',
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
   cameraIcon: {
     alignItems: 'center',
   },
@@ -285,16 +320,25 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     flex: 1,
-    gap: 56,
+    gap: 48,
     justifyContent: 'center',
   },
   copy: {
-    gap: 10,
+    gap: 12,
   },
   iconCircle: {
     alignItems: 'center',
     backgroundColor: '#171717',
     borderColor: '#ffffff',
+    borderRadius: 36,
+    borderWidth: 2,
+    height: 72,
+    justifyContent: 'center',
+    width: 72,
+  },
+  iconRing: {
+    alignItems: 'center',
+    borderColor: 'rgba(255, 255, 255, 0.18)',
     borderRadius: 48,
     borderWidth: 2,
     height: 96,
@@ -307,6 +351,14 @@ const styles = StyleSheet.create({
     height: 64,
     width: 64,
   },
+  screen: {
+    backgroundColor: '#171717',
+    flex: 1,
+    justifyContent: 'center',
+    paddingBottom: 56,
+    paddingHorizontal: 24,
+    paddingTop: 56,
+  },
   shutterOuter: {
     alignItems: 'center',
     borderColor: '#ffffff',
@@ -315,5 +367,28 @@ const styles = StyleSheet.create({
     height: 76,
     justifyContent: 'center',
     width: 76,
+  },
+  timerPill: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 17,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  timerPillText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  title: {
+    color: '#ffffff',
+    fontSize: 28,
+    fontWeight: '800',
+    lineHeight: 34,
+    textAlign: 'center',
   },
 });
