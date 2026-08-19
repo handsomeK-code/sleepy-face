@@ -1,20 +1,19 @@
 import { router } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  SafeAreaView,
   StyleSheet,
-  Switch,
   Text,
   View,
   type ListRenderItem,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   AlarmServiceError,
-  getNextAlarmOccurrence,
   listSavedAlarms,
   setSavedAlarmEnabled,
   type SavedAlarm,
@@ -30,7 +29,37 @@ const WEEKDAY_LABELS: Record<Weekday, string> = {
   5: '金',
   6: '土',
 };
-const WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5];
+const DISPLAY_WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5, 6, 0];
+const BOTTOM_TABS = [
+  {
+    icon: { ios: 'alarm', android: 'alarm', web: 'alarm' },
+    label: 'アラーム',
+    route: '/alarms',
+    isActive: true,
+  },
+  {
+    icon: { ios: 'house', android: 'home', web: 'home' },
+    label: 'ホーム',
+    route: '/home',
+    isActive: false,
+  },
+  {
+    icon: {
+      ios: 'person.badge.plus',
+      android: 'person_add',
+      web: 'person_add',
+    },
+    label: '友達',
+    route: '/add-friend',
+    isActive: false,
+  },
+  {
+    icon: { ios: 'gearshape', android: 'settings', web: 'settings' },
+    label: '設定',
+    route: '/profile-setup',
+    isActive: false,
+  },
+] as const;
 
 function formatTime(alarm: SavedAlarm): string {
   return `${String(alarm.hour).padStart(2, '0')}:${String(
@@ -39,31 +68,13 @@ function formatTime(alarm: SavedAlarm): string {
 }
 
 function formatWeekdays(weekdays: Weekday[]): string {
-  if (weekdays.length === 7) {
-    return '毎日';
+  if (weekdays.length === 0) {
+    return '繰り返しなし';
   }
 
-  if (
-    weekdays.length === WEEKDAYS.length &&
-    weekdays.every((weekday, index) => weekday === WEEKDAYS[index])
-  ) {
-    return '平日';
-  }
-
-  if (weekdays.length === 2 && weekdays.includes(0) && weekdays.includes(6)) {
-    return '週末';
-  }
-
-  return weekdays.map((weekday) => WEEKDAY_LABELS[weekday]).join('・');
-}
-
-function formatNextOccurrence(alarm: SavedAlarm): string {
-  const nextOccurrence = getNextAlarmOccurrence(alarm);
-  const month = nextOccurrence.getMonth() + 1;
-  const date = nextOccurrence.getDate();
-  const weekday = WEEKDAY_LABELS[nextOccurrence.getDay() as Weekday];
-
-  return `${month}/${date}(${weekday}) ${formatTime(alarm)}`;
+  return DISPLAY_WEEKDAYS.filter((weekday) => weekdays.includes(weekday))
+    .map((weekday) => WEEKDAY_LABELS[weekday])
+    .join(' ');
 }
 
 function getAlarmErrorMessage(error: unknown): string {
@@ -90,18 +101,19 @@ export default function AlarmsScreen() {
   const [alarms, setAlarms] = useState<SavedAlarm[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [updatingAlarmId, setUpdatingAlarmId] = useState<string | null>(null);
 
   const loadAlarms = useCallback(async () => {
     setErrorMessage(null);
-    setIsLoading(true);
+    setIsRefreshing(true);
 
     try {
       setAlarms(await listSavedAlarms());
     } catch (error) {
       setErrorMessage(getAlarmErrorMessage(error));
     } finally {
-      setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -180,14 +192,25 @@ export default function AlarmsScreen() {
         ]}
       >
         <View style={styles.alarmMain}>
-          <Text
-            style={[
-              styles.alarmTime,
-              !item.isEnabled && styles.alarmTextDisabled,
-            ]}
-          >
-            {formatTime(item)}
-          </Text>
+          <View style={styles.alarmTopRow}>
+            <Text
+              style={[
+                styles.alarmTime,
+                !item.isEnabled && styles.alarmTextDisabled,
+              ]}
+            >
+              {formatTime(item)}
+            </Text>
+            <Text
+              style={[
+                styles.statusText,
+                !item.isEnabled && styles.alarmTextDisabled,
+              ]}
+            >
+              {item.isEnabled ? 'ON' : 'OFF'}
+            </Text>
+          </View>
+
           <Text
             style={[
               styles.weekdayText,
@@ -196,83 +219,103 @@ export default function AlarmsScreen() {
           >
             {formatWeekdays(item.weekdays)}
           </Text>
-          <Text style={styles.nextText}>
-            {item.isEnabled ? `次回 ${formatNextOccurrence(item)}` : '停止中'}
-          </Text>
         </View>
 
-        <View style={styles.switchColumn}>
-          <Switch
-            disabled={isUpdating}
-            onValueChange={(value) => handleToggleAlarm(item, value)}
-            value={item.isEnabled}
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityState={{ checked: item.isEnabled, disabled: isUpdating }}
+          disabled={isUpdating}
+          hitSlop={12}
+          onPress={(event) => {
+            event.stopPropagation();
+            void handleToggleAlarm(item, !item.isEnabled);
+          }}
+          style={[
+            styles.switchTrack,
+            item.isEnabled ? styles.switchTrackOn : styles.switchTrackOff,
+          ]}
+        >
+          <View
+            style={[
+              styles.switchThumb,
+              item.isEnabled ? styles.switchThumbOn : styles.switchThumbOff,
+            ]}
           />
-          <Text style={styles.switchLabel}>
-            {item.isEnabled ? 'ON' : 'OFF'}
-          </Text>
-        </View>
+        </Pressable>
       </Pressable>
     );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
+      <View style={styles.screen}>
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>SLEEPY FACE</Text>
           <Text style={styles.title}>アラーム</Text>
-          <Text style={styles.description}>
-            登録済みアラームの時刻、繰り返し曜日、ON/OFF状態を確認できます。
-          </Text>
         </View>
 
-        <View style={styles.actionRow}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={loadAlarms}
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              pressed && styles.buttonPressed,
-            ]}
-          >
-            <Text style={styles.secondaryButtonText}>再読み込み</Text>
-          </Pressable>
+        <View style={styles.content}>
+          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.navigate('/add-alarm')}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              pressed && styles.buttonPressed,
-            ]}
-          >
-            <Text style={styles.primaryButtonText}>追加</Text>
-          </Pressable>
+          {isLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color="#171717" />
+              <Text style={styles.loadingText}>アラームを読み込み中...</Text>
+            </View>
+          ) : (
+            <FlatList
+              contentContainerStyle={styles.alarmList}
+              data={alarms}
+              keyExtractor={(item) => item.id}
+              ListEmptyComponent={
+                <View style={styles.emptyBox}>
+                  <Text style={styles.emptyTitle}>アラームがありません</Text>
+                  <Text style={styles.emptyText}>
+                    右下のプラスボタンから新しいアラームを作成できます。
+                  </Text>
+                </View>
+              }
+              onRefresh={loadAlarms}
+              refreshing={isRefreshing}
+              renderItem={renderItem}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
         </View>
 
-        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+        <Pressable
+          accessibilityLabel="アラームを追加"
+          accessibilityRole="button"
+          onPress={() => router.push('/add-alarm')}
+          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+        >
+          <Text style={styles.fabText}>+</Text>
+        </Pressable>
 
-        {isLoading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator />
-            <Text style={styles.loadingText}>アラームを読み込み中...</Text>
-          </View>
-        ) : (
-          <FlatList
-            contentContainerStyle={styles.alarmList}
-            data={alarms}
-            keyExtractor={(item) => item.id}
-            ListEmptyComponent={
-              <View style={styles.emptyBox}>
-                <Text style={styles.emptyTitle}>アラームがありません</Text>
-                <Text style={styles.emptyText}>
-                  追加ボタンから新しいアラームを作成できます。
-                </Text>
-              </View>
-            }
-            renderItem={renderItem}
-          />
-        )}
+        <View style={styles.bottomNav}>
+          {BOTTOM_TABS.map((tab) => (
+            <Pressable
+              accessibilityRole="button"
+              key={tab.label}
+              onPress={() => router.navigate(tab.route)}
+              style={styles.bottomNavItem}
+            >
+              <SymbolView
+                name={tab.icon}
+                size={24}
+                tintColor={tab.isActive ? '#171717' : '#a3a3a3'}
+                type="monochrome"
+              />
+              <Text
+                style={[
+                  styles.bottomNavLabel,
+                  tab.isActive && styles.bottomNavLabelActive,
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -281,70 +324,28 @@ export default function AlarmsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f7fb',
+    backgroundColor: '#ffffff',
   },
-  container: {
+  screen: {
     flex: 1,
-    padding: 24,
+    backgroundColor: '#ffffff',
   },
   header: {
-    marginBottom: 24,
-  },
-  eyebrow: {
-    color: '#536dfe',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1.6,
-    marginBottom: 10,
+    borderBottomColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    height: 61,
+    justifyContent: 'center',
+    paddingHorizontal: 28,
   },
   title: {
-    color: '#172033',
-    fontSize: 32,
+    color: '#171717',
+    fontSize: 20,
     fontWeight: '800',
-    marginBottom: 10,
   },
-  description: {
-    color: '#657086',
-    fontSize: 15,
-    lineHeight: 23,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-  primaryButton: {
-    alignItems: 'center',
-    backgroundColor: '#172033',
-    borderRadius: 14,
+  content: {
     flex: 1,
-    justifyContent: 'center',
-    minHeight: 52,
     paddingHorizontal: 16,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  secondaryButton: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: '#d8deea',
-    borderRadius: 14,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: 16,
-  },
-  secondaryButtonText: {
-    color: '#172033',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  buttonPressed: {
-    opacity: 0.82,
+    paddingTop: 16,
   },
   errorText: {
     color: '#b42318',
@@ -355,82 +356,163 @@ const styles = StyleSheet.create({
   loadingBox: {
     alignItems: 'center',
     gap: 10,
-    paddingVertical: 40,
+    paddingVertical: 44,
   },
   loadingText: {
-    color: '#657086',
+    color: '#737373',
     fontSize: 14,
   },
   alarmList: {
-    gap: 12,
-    paddingBottom: 32,
+    gap: 14,
+    paddingBottom: 116,
   },
   alarmCard: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: '#e2e7f0',
-    borderRadius: 14,
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
-    minHeight: 116,
-    padding: 16,
+    minHeight: 110,
+    paddingHorizontal: 24,
+    paddingVertical: 18,
   },
   alarmCardDisabled: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
+    opacity: 0.62,
   },
   cardPressed: {
-    opacity: 0.86,
+    opacity: 0.78,
   },
   alarmMain: {
     flex: 1,
-    marginRight: 14,
+    marginRight: 16,
+  },
+  alarmTopRow: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    gap: 14,
+    marginBottom: 8,
   },
   alarmTime: {
-    color: '#172033',
-    fontSize: 40,
+    color: '#171717',
+    fontSize: 34,
     fontWeight: '800',
-    marginBottom: 6,
+    lineHeight: 40,
   },
-  weekdayText: {
-    color: '#344054',
-    fontSize: 15,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
-  nextText: {
-    color: '#657086',
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  alarmTextDisabled: {
-    color: '#98a2b3',
-  },
-  switchColumn: {
-    alignItems: 'center',
-    minWidth: 58,
-  },
-  switchLabel: {
-    color: '#657086',
+  statusText: {
+    color: '#171717',
     fontSize: 12,
     fontWeight: '800',
-    marginTop: 4,
+    lineHeight: 24,
+  },
+  weekdayText: {
+    color: '#737373',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  alarmTextDisabled: {
+    color: '#737373',
+  },
+  switchTrack: {
+    borderRadius: 999,
+    height: 28,
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    width: 52,
+  },
+  switchTrackOn: {
+    alignItems: 'flex-end',
+    backgroundColor: '#171717',
+  },
+  switchTrackOff: {
+    alignItems: 'flex-start',
+    backgroundColor: '#d4d4d4',
+  },
+  switchThumb: {
+    backgroundColor: '#ffffff',
+    borderRadius: 11,
+    height: 22,
+    width: 22,
+  },
+  switchThumbOn: {
+    backgroundColor: '#ffffff',
+  },
+  switchThumbOff: {
+    backgroundColor: '#ffffff',
   },
   emptyBox: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e2e7f0',
-    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 28,
   },
   emptyTitle: {
-    color: '#172033',
+    color: '#171717',
     fontSize: 17,
     fontWeight: '800',
     marginBottom: 8,
   },
   emptyText: {
-    color: '#657086',
+    color: '#737373',
     fontSize: 14,
     lineHeight: 21,
+    textAlign: 'center',
+  },
+  fab: {
+    alignItems: 'center',
+    backgroundColor: '#171717',
+    borderRadius: 28,
+    bottom: 88,
+    elevation: 8,
+    height: 56,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 24,
+    width: 56,
+    zIndex: 20,
+  },
+  fabPressed: {
+    opacity: 0.78,
+  },
+  fabText: {
+    color: '#ffffff',
+    fontSize: 36,
+    fontWeight: '300',
+    lineHeight: 40,
+    marginTop: -2,
+  },
+  bottomNav: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderTopColor: '#f1f1f1',
+    borderTopWidth: 1,
+    bottom: 0,
+    flexDirection: 'row',
+    height: 74,
+    justifyContent: 'space-around',
+    left: 0,
+    paddingHorizontal: 12,
+    position: 'absolute',
+    right: 0,
+    zIndex: 10,
+  },
+  bottomNavItem: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 6,
+    justifyContent: 'center',
+    minHeight: 54,
+  },
+  bottomNavLabel: {
+    color: '#a3a3a3',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  bottomNavLabelActive: {
+    color: '#171717',
   },
 });
