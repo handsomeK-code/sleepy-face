@@ -191,46 +191,50 @@ export default function QuizScreen() {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.prompt}>
-          {isActive ? quizState.question.prompt : 'CLEAR'}
-        </Text>
+        <View style={styles.questionGroup}>
+          <Text style={styles.prompt}>
+            {isActive ? quizState.question.prompt : 'CLEAR'}
+          </Text>
 
-        <View style={styles.answerBox}>
-          <View style={styles.answerBoxSurface}>
-            <Text
-              style={answerText ? styles.inputText : styles.inputPlaceholder}
-            >
-              {answerText || '?'}
-            </Text>
+          <View style={styles.answerBox}>
+            <View style={styles.answerBoxSurface}>
+              <Text
+                style={answerText ? styles.inputText : styles.inputPlaceholder}
+              >
+                {answerText || '?'}
+              </Text>
+            </View>
+            <View style={styles.answerBoxUnderline} />
           </View>
-          <View style={styles.answerBoxUnderline} />
         </View>
 
-        <View style={styles.grid}>
-          {KEYPAD_KEYS.map((key) => (
-            <Pressable
-              accessibilityRole="button"
-              disabled={isRecordingFailure}
-              key={key}
-              onPress={() => handleKeypadPress(key)}
-              style={({ pressed }) => [
-                styles.gridCell,
-                pressed && styles.gridCellPressed,
-              ]}
-            >
-              <Text style={styles.gridText}>{getKeypadKeyLabel(key)}</Text>
-            </Pressable>
-          ))}
+        <View style={styles.keypadGroup}>
+          <View style={styles.grid}>
+            {KEYPAD_KEYS.map((key) => (
+              <Pressable
+                accessibilityRole="button"
+                disabled={isRecordingFailure}
+                key={key}
+                onPress={() => handleKeypadPress(key)}
+                style={({ pressed }) => [
+                  styles.gridCell,
+                  pressed && styles.gridCellPressed,
+                ]}
+              >
+                <Text style={styles.gridText}>{getKeypadKeyLabel(key)}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <ActionButton
+            disabled={!answerText.trim() || isRecordingFailure}
+            label={isRecordingFailure ? '失敗を記録中' : '回答する'}
+            loading={isSubmitting || isRecordingFailure}
+            onPress={handleSubmitAnswer}
+          />
+
+          {!!errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
         </View>
-
-        <ActionButton
-          disabled={!answerText.trim() || isRecordingFailure}
-          label={isRecordingFailure ? '失敗を記録中' : '回答する'}
-          loading={isSubmitting || isRecordingFailure}
-          onPress={handleSubmitAnswer}
-        />
-
-        {!!errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
       </View>
     </View>
   );
@@ -256,10 +260,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    gap: 16,
+    justifyContent: 'space-between',
     paddingBottom: 24,
     paddingHorizontal: 24,
-    paddingTop: 24,
+    paddingTop: 40,
   },
   correctCue: {
     color: '#16a34a',
@@ -299,7 +303,6 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingBottom: 8,
     paddingHorizontal: 24,
     paddingTop: 56,
   },
@@ -320,6 +323,9 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
   },
+  keypadGroup: {
+    gap: 20,
+  },
   progress: {
     color: '#737373',
     fontSize: 16,
@@ -333,6 +339,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     lineHeight: 48,
     textAlign: 'center',
+  },
+  questionGroup: {
+    alignItems: 'center',
   },
   screen: {
     backgroundColor: '#ffffff',
