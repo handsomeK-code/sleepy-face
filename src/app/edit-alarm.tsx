@@ -21,7 +21,7 @@ import {
 } from '@/services/alarm';
 
 const ITEM_HEIGHT = 64;
-const WHEEL_VIEWPORT_HEIGHT = ITEM_HEIGHT;
+const WHEEL_VIEWPORT_HEIGHT = 96;
 const WHEEL_VERTICAL_PADDING = (WHEEL_VIEWPORT_HEIGHT - ITEM_HEIGHT) / 2;
 const WHEEL_REPEAT_COUNT = 80;
 const WHEEL_START_REPEAT = Math.floor(WHEEL_REPEAT_COUNT / 2);
@@ -102,42 +102,41 @@ function TimeWheel({
         type="monochrome"
       />
 
-      <FlatList
-        contentContainerStyle={styles.timeWheelContent}
-        data={loopedOptions}
-        decelerationRate="fast"
-        getItemLayout={(_, index) => ({
-          index,
-          length: ITEM_HEIGHT,
-          offset: ITEM_HEIGHT * index,
-        })}
-        initialNumToRender={7}
-        initialScrollIndex={initialIndex}
-        keyExtractor={(_, index) => String(index)}
-        maxToRenderPerBatch={8}
-        nestedScrollEnabled
-        onMomentumScrollEnd={handleScrollEnd}
-        onScrollEndDrag={handleScrollEnd}
-        removeClippedSubviews
-        renderItem={({ item }) => (
-          <View style={styles.timeItem}>
-            <Text
-              style={[
-                styles.timeItemText,
-                item === value
-                  ? styles.timeItemTextActive
-                  : styles.timeItemTextMuted,
-              ]}
-            >
-              {formatNumber(item)}
-            </Text>
-          </View>
-        )}
-        showsVerticalScrollIndicator={false}
-        snapToInterval={ITEM_HEIGHT}
-        style={styles.timeWheelScroll}
-        windowSize={5}
-      />
+      <View style={styles.timeWheelViewport}>
+        <FlatList
+          contentContainerStyle={styles.timeWheelContent}
+          data={loopedOptions}
+          decelerationRate="fast"
+          getItemLayout={(_, index) => ({
+            index,
+            length: ITEM_HEIGHT,
+            offset: ITEM_HEIGHT * index,
+          })}
+          initialNumToRender={7}
+          initialScrollIndex={initialIndex}
+          keyExtractor={(_, index) => String(index)}
+          maxToRenderPerBatch={8}
+          nestedScrollEnabled
+          onMomentumScrollEnd={handleScrollEnd}
+          onScrollEndDrag={handleScrollEnd}
+          removeClippedSubviews
+          renderItem={({ item }) => (
+            <View style={styles.timeItem}>
+              <Text style={styles.timeItemTextHidden}>
+                {formatNumber(item)}
+              </Text>
+            </View>
+          )}
+          showsVerticalScrollIndicator={false}
+          snapToInterval={ITEM_HEIGHT}
+          style={styles.timeWheelScroll}
+          windowSize={5}
+        />
+
+        <View pointerEvents="none" style={styles.timeWheelSelectedValue}>
+          <Text style={styles.timeItemTextActive}>{formatNumber(value)}</Text>
+        </View>
+      </View>
 
       <SymbolView
         name={{
@@ -440,26 +439,41 @@ const styles = StyleSheet.create({
   timeWheelScroll: {
     height: WHEEL_VIEWPORT_HEIGHT,
   },
+  timeWheelViewport: {
+    height: WHEEL_VIEWPORT_HEIGHT,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+    width: 96,
+  },
   timeWheelContent: {
     paddingVertical: WHEEL_VERTICAL_PADDING,
+  },
+  timeWheelSelectedValue: {
+    alignItems: 'center',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   timeItem: {
     alignItems: 'center',
     height: ITEM_HEIGHT,
     justifyContent: 'center',
   },
-  timeItemText: {
-    fontWeight: '800',
-  },
   timeItemTextActive: {
     color: '#171717',
     fontSize: 60,
+    fontWeight: '800',
     lineHeight: 66,
   },
-  timeItemTextMuted: {
-    color: '#d4d4d4',
-    fontSize: 22,
-    lineHeight: 28,
+  timeItemTextHidden: {
+    color: 'transparent',
+    fontSize: 60,
+    fontWeight: '800',
+    lineHeight: 66,
   },
   timeColon: {
     color: '#d4d4d4',
