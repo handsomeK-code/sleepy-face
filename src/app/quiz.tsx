@@ -140,7 +140,10 @@ export default function QuizScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        style={styles.scroll}
+      >
         <View style={styles.header}>
           <View style={styles.timerPill}>
             <Text style={styles.timerPillText}>
@@ -324,6 +327,9 @@ const styles = StyleSheet.create({
   },
   screen: {
     backgroundColor: '#ffffff',
+    flex: 1,
+  },
+  scroll: {
     flex: 1,
   },
   scrollContent: {

@@ -189,7 +189,10 @@ export default function RingingScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        style={styles.scroll}
+      >
         <View style={styles.timerPill}>
           <Text style={styles.timerPillText}>
             あと {formatRemainingTime(timer)}
@@ -332,6 +335,9 @@ const styles = StyleSheet.create({
   },
   screen: {
     backgroundColor: '#171717',
+    flex: 1,
+  },
+  scroll: {
     flex: 1,
   },
   scrollContent: {

@@ -12,7 +12,10 @@ export default function QuizSuccessScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        style={styles.scroll}
+      >
         <View style={styles.content}>
           <View style={styles.icon}>
             <Text style={styles.iconText}>✓</Text>
@@ -44,6 +47,9 @@ const styles = StyleSheet.create({
   },
   screen: {
     backgroundColor: '#ffffff',
+    flex: 1,
+  },
+  scroll: {
     flex: 1,
   },
   scrollContent: {
