@@ -19,7 +19,7 @@ import {
 } from '@/services/alarm';
 
 const ITEM_HEIGHT = 64;
-const WHEEL_VIEWPORT_HEIGHT = 96;
+const WHEEL_VIEWPORT_HEIGHT = 150;
 const WHEEL_VERTICAL_PADDING = (WHEEL_VIEWPORT_HEIGHT - ITEM_HEIGHT) / 2;
 const WHEEL_REPEAT_COUNT = 80;
 const WHEEL_START_REPEAT = Math.floor(WHEEL_REPEAT_COUNT / 2);
@@ -62,26 +62,52 @@ function TimeWheel({
   options: number[];
   value: number;
 }) {
+  const normalizedValue =
+    ((value % options.length) + options.length) % options.length;
+  const [scrollPreviewValue, setScrollPreviewValue] = useState<number | null>(
+    null,
+  );
   const loopedOptions = useMemo(
     () => Array.from({ length: WHEEL_REPEAT_COUNT }).flatMap(() => options),
     [options],
   );
-  const initialIndex = WHEEL_START_REPEAT * options.length + value;
+  const initialIndex = WHEEL_START_REPEAT * options.length + normalizedValue;
 
-  const handleScrollEnd = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const nextIndex = Math.round(
-        event.nativeEvent.contentOffset.y / ITEM_HEIGHT,
-      );
+  const getValueFromOffset = useCallback(
+    (offsetY: number) => {
+      const nextIndex = Math.round(offsetY / ITEM_HEIGHT);
       const safeIndex = Math.min(
         Math.max(nextIndex, 0),
         loopedOptions.length - 1,
       );
 
-      onChange(loopedOptions[safeIndex] % options.length);
+      return loopedOptions[safeIndex] % options.length;
     },
-    [loopedOptions, onChange, options.length],
+    [loopedOptions, options.length],
   );
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      setScrollPreviewValue(
+        getValueFromOffset(event.nativeEvent.contentOffset.y),
+      );
+    },
+    [getValueFromOffset],
+  );
+
+  const handleScrollEnd = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const nextValue = getValueFromOffset(event.nativeEvent.contentOffset.y);
+
+      onChange(nextValue);
+      setScrollPreviewValue(null);
+    },
+    [getValueFromOffset, onChange],
+  );
+
+  const displayValue = scrollPreviewValue ?? normalizedValue;
+  const previousValue = (displayValue - 1 + options.length) % options.length;
+  const nextValue = (displayValue + 1) % options.length;
 
   return (
     <View style={styles.timeWheel}>
@@ -97,6 +123,18 @@ function TimeWheel({
       />
 
       <View style={styles.timeWheelViewport}>
+        <View pointerEvents="none" style={styles.timeWheelVisibleValues}>
+          <Text style={[styles.timeItemText, styles.timeItemTextMuted]}>
+            {formatNumber(previousValue)}
+          </Text>
+          <Text style={[styles.timeItemText, styles.timeItemTextActive]}>
+            {formatNumber(displayValue)}
+          </Text>
+          <Text style={[styles.timeItemText, styles.timeItemTextMuted]}>
+            {formatNumber(nextValue)}
+          </Text>
+        </View>
+
         <FlatList
           contentContainerStyle={styles.timeWheelContent}
           data={loopedOptions}
@@ -112,24 +150,16 @@ function TimeWheel({
           maxToRenderPerBatch={8}
           nestedScrollEnabled
           onMomentumScrollEnd={handleScrollEnd}
+          onScroll={handleScroll}
           onScrollEndDrag={handleScrollEnd}
           removeClippedSubviews
-          renderItem={({ item }) => (
-            <View style={styles.timeItem}>
-              <Text style={styles.timeItemTextHidden}>
-                {formatNumber(item)}
-              </Text>
-            </View>
-          )}
+          renderItem={() => <View style={styles.timeItem} />}
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           snapToInterval={ITEM_HEIGHT}
-          style={styles.timeWheelScroll}
+          style={[styles.timeWheelScroll, styles.timeWheelTouchLayer]}
           windowSize={5}
         />
-
-        <View pointerEvents="none" style={styles.timeWheelSelectedValue}>
-          <Text style={styles.timeItemTextActive}>{formatNumber(value)}</Text>
-        </View>
       </View>
 
       <SymbolView
@@ -316,6 +346,9 @@ const styles = StyleSheet.create({
   timeWheelScroll: {
     height: WHEEL_VIEWPORT_HEIGHT,
   },
+  timeWheelTouchLayer: {
+    opacity: 0,
+  },
   timeWheelViewport: {
     height: WHEEL_VIEWPORT_HEIGHT,
     justifyContent: 'center',
@@ -323,10 +356,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: 96,
   },
-  timeWheelContent: {
-    paddingVertical: WHEEL_VERTICAL_PADDING,
-  },
-  timeWheelSelectedValue: {
+  timeWheelVisibleValues: {
     alignItems: 'center',
     bottom: 0,
     justifyContent: 'center',
@@ -335,22 +365,26 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
   },
+  timeWheelContent: {
+    paddingVertical: WHEEL_VERTICAL_PADDING,
+  },
   timeItem: {
     alignItems: 'center',
     height: ITEM_HEIGHT,
     justifyContent: 'center',
   },
+  timeItemText: {
+    fontWeight: '800',
+  },
   timeItemTextActive: {
     color: '#171717',
     fontSize: 60,
-    fontWeight: '800',
     lineHeight: 66,
   },
-  timeItemTextHidden: {
-    color: 'transparent',
-    fontSize: 60,
-    fontWeight: '800',
-    lineHeight: 66,
+  timeItemTextMuted: {
+    color: '#d4d4d4',
+    fontSize: 24,
+    lineHeight: 30,
   },
   timeColon: {
     color: '#d4d4d4',
