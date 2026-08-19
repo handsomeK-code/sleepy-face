@@ -1,28 +1,32 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
   type ListRenderItem,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PROFILE_ICON_SOURCES } from '@/constants/profile-icons';
 import {
   FriendServiceError,
   addFriend,
-  listFriends,
   listFriendRelations,
   normalizeFriendSearchQuery,
   searchProfiles,
-  type FriendProfile,
   type FriendRelation,
   type FriendSearchProfile,
 } from '@/services/friend';
+
+// Flip to true locally to use the dev-only debug tools below. Always false in committed code.
+const SHOW_DEBUG_TOOLS = false;
 
 function getFriendErrorMessage(error: unknown): string {
   if (error instanceof FriendServiceError) {
@@ -43,7 +47,6 @@ function getFriendErrorMessage(error: unknown): string {
 
 export default function AddFriendScreen() {
   const [query, setQuery] = useState('');
-  const [friends, setFriends] = useState<FriendProfile[]>([]);
   const [relations, setRelations] = useState<FriendRelation[]>([]);
   const [results, setResults] = useState<FriendSearchProfile[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -66,11 +69,10 @@ export default function AddFriendScreen() {
   useEffect(() => {
     let isActive = true;
 
-    Promise.all([listFriendRelations(), listFriends()])
-      .then(([nextRelations, nextFriends]) => {
+    listFriendRelations()
+      .then((nextRelations) => {
         if (isActive) {
           setRelations(nextRelations);
-          setFriends(nextFriends);
         }
       })
       .catch((error: unknown) => {
@@ -97,7 +99,7 @@ export default function AddFriendScreen() {
 
     if (normalizedQuery.length < 2) {
       setResults([]);
-      setErrorMessage('ユーザーIDか表示名を2文字以上入力してください。');
+      setErrorMessage('ユーザーIDを2文字以上入力してください。');
       return;
     }
 
@@ -126,19 +128,48 @@ export default function AddFriendScreen() {
     try {
       const relation = await addFriend(profile.id);
       setRelations((currentRelations) => [relation, ...currentRelations]);
-      setFriends((currentFriends) => [
-        {
-          ...profile,
-          relationId: relation.id,
-        },
-        ...currentFriends,
-      ]);
       setSuccessMessage(`${profile.displayName}を友達に追加しました。`);
     } catch (error) {
       setErrorMessage(getFriendErrorMessage(error));
     } finally {
       setAddingProfileId(null);
     }
+  }, []);
+
+  // DEV-ONLY: injects a mock search result already marked as a friend (no Supabase write), to preview the disabled "追加済み" state. Remove before ship.
+  const handleAddMockExistingFriend = useCallback(() => {
+    const mockId = `mock-existing-${Date.now()}`;
+    const mockProfile: FriendSearchProfile = {
+      createdAt: new Date().toISOString(),
+      displayName: 'モック既存友達',
+      iconId: 'man2',
+      id: mockId,
+      userId: `mock_existing_${Date.now()}`,
+    };
+
+    setResults((currentResults) => [mockProfile, ...currentResults]);
+    setRelations((currentRelations) => [
+      {
+        createdAt: new Date().toISOString(),
+        friendProfileId: mockId,
+        id: `mock-relation-${Date.now()}`,
+        profileId: 'mock-self',
+      },
+      ...currentRelations,
+    ]);
+  }, []);
+
+  // DEV-ONLY: injects a mock search result not yet a friend (no Supabase write), to preview the active "追加" state. Remove before ship.
+  const handleAddMockSearchResult = useCallback(() => {
+    const mockProfile: FriendSearchProfile = {
+      createdAt: new Date().toISOString(),
+      displayName: 'モック検索結果',
+      iconId: 'woman',
+      id: `mock-result-${Date.now()}`,
+      userId: `mock_result_${Date.now()}`,
+    };
+
+    setResults((currentResults) => [mockProfile, ...currentResults]);
   }, []);
 
   const renderItem: ListRenderItem<FriendSearchProfile> = ({ item }) => {
@@ -148,7 +179,11 @@ export default function AddFriendScreen() {
     return (
       <View style={styles.resultCard}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{item.displayName.at(0) ?? '?'}</Text>
+          <Image
+            contentFit="cover"
+            source={PROFILE_ICON_SOURCES[item.iconId]}
+            style={styles.avatarImage}
+          />
         </View>
 
         <View style={styles.profileText}>
@@ -174,121 +209,115 @@ export default function AddFriendScreen() {
     );
   };
 
-  const renderFriendItem: ListRenderItem<FriendProfile> = ({ item }) => (
-    <View style={styles.friendCard}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{item.displayName.at(0) ?? '?'}</Text>
-      </View>
-
-      <View style={styles.profileText}>
-        <Text style={styles.displayName}>{item.displayName}</Text>
-        <Text style={styles.userId}>@{item.userId}</Text>
-      </View>
-
-      <Text style={styles.friendBadge}>友達</Text>
-    </View>
-  );
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
+      <View style={styles.screen}>
         <View style={styles.header}>
           <Pressable
+            accessibilityLabel="友達一覧に戻る"
             accessibilityRole="button"
-            onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && styles.buttonPressed,
-            ]}
+            hitSlop={12}
+            onPress={() => router.replace('/friends')}
+            style={styles.closeButton}
           >
-            <Text style={styles.backButtonText}>戻る</Text>
+            <SymbolView
+              name={{ ios: 'xmark', android: 'close', web: 'close' }}
+              size={24}
+              tintColor="#737373"
+              type="monochrome"
+            />
           </Pressable>
-
-          <Text style={styles.title}>友達追加</Text>
-          <Text style={styles.description}>
-            ユーザーIDまたは表示名で検索できます。
-          </Text>
+          <Text style={styles.title}>友達を追加</Text>
         </View>
 
-        <View style={styles.searchRow}>
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isSearching}
-            onChangeText={setQuery}
-            onSubmitEditing={handleSearch}
-            placeholder="ユーザーID / 表示名"
-            returnKeyType="search"
-            style={styles.input}
-            value={query}
-          />
+        <View style={styles.content}>
+          {isLoadingRelations ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color="#171717" />
+              <Text style={styles.loadingText}>友達情報を確認中...</Text>
+            </View>
+          ) : (
+            <FlatList
+              contentContainerStyle={styles.resultList}
+              data={results}
+              keyboardShouldPersistTaps="handled"
+              keyExtractor={(item) => item.id}
+              ListEmptyComponent={
+                <View style={styles.emptyBox}>
+                  <Text style={styles.emptyText}>
+                    友達に追加したいユーザーを検索してください。
+                  </Text>
+                </View>
+              }
+              ListHeaderComponent={
+                <View style={styles.listHeader}>
+                  {/* DEV-ONLY: no design, just to preview the search-result card states. Flip SHOW_DEBUG_TOOLS to true locally to use it. */}
+                  {SHOW_DEBUG_TOOLS && (
+                    <View style={styles.debugButtonRow}>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={handleAddMockExistingFriend}
+                      >
+                        <Text style={styles.debugToggleText}>
+                          [DEBUG] +既存友達
+                        </Text>
+                      </Pressable>
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={isSearching}
-            onPress={handleSearch}
-            style={({ pressed }) => [
-              styles.searchButton,
-              pressed && styles.buttonPressed,
-              isSearching && styles.searchButtonDisabled,
-            ]}
-          >
-            <Text style={styles.searchButtonText}>
-              {isSearching ? '検索中' : '検索'}
-            </Text>
-          </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={handleAddMockSearchResult}
+                      >
+                        <Text style={styles.debugToggleText}>
+                          [DEBUG] +検索結果
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
+
+                  <Text style={styles.description}>
+                    ユーザーIDで検索できます。
+                  </Text>
+
+                  <TextInput
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isSearching}
+                    onChangeText={setQuery}
+                    onSubmitEditing={handleSearch}
+                    placeholder="ユーザーID"
+                    placeholderTextColor="#a3a3a3"
+                    returnKeyType="search"
+                    style={styles.input}
+                    value={query}
+                  />
+
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={isSearching}
+                    onPress={handleSearch}
+                    style={({ pressed }) => [
+                      styles.searchButton,
+                      pressed && styles.buttonPressed,
+                      isSearching && styles.searchButtonDisabled,
+                    ]}
+                  >
+                    <Text style={styles.searchButtonText}>
+                      {isSearching ? '検索中...' : '検索'}
+                    </Text>
+                  </Pressable>
+
+                  {errorMessage && (
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  )}
+                  {successMessage && (
+                    <Text style={styles.successText}>{successMessage}</Text>
+                  )}
+                </View>
+              }
+              renderItem={renderItem}
+            />
+          )}
         </View>
-
-        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-        {successMessage && (
-          <Text style={styles.successText}>{successMessage}</Text>
-        )}
-
-        {isLoadingRelations ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator />
-            <Text style={styles.loadingText}>友達情報を確認中...</Text>
-          </View>
-        ) : (
-          <View style={styles.content}>
-            <View>
-              <Text style={styles.sectionTitle}>追加済みの友達</Text>
-              <FlatList
-                contentContainerStyle={styles.friendList}
-                data={friends}
-                horizontal
-                keyExtractor={(item) => item.relationId}
-                ListEmptyComponent={
-                  <View style={styles.emptyFriendBox}>
-                    <Text style={styles.emptyText}>
-                      まだ友達が追加されていません。
-                    </Text>
-                  </View>
-                }
-                renderItem={renderFriendItem}
-                showsHorizontalScrollIndicator={false}
-              />
-            </View>
-
-            <View style={styles.searchResults}>
-              <Text style={styles.sectionTitle}>検索結果</Text>
-              <FlatList
-                contentContainerStyle={styles.resultList}
-                data={results}
-                keyboardShouldPersistTaps="handled"
-                keyExtractor={(item) => item.id}
-                ListEmptyComponent={
-                  <View style={styles.emptyBox}>
-                    <Text style={styles.emptyText}>
-                      友達に追加したいユーザーを検索してください。
-                    </Text>
-                  </View>
-                }
-                renderItem={renderItem}
-              />
-            </View>
-          </View>
-        )}
       </View>
     </SafeAreaView>
   );
@@ -297,80 +326,83 @@ export default function AddFriendScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f7fb',
+    backgroundColor: '#ffffff',
   },
-  container: {
+  screen: {
     flex: 1,
-    padding: 24,
+    backgroundColor: '#ffffff',
   },
   header: {
-    marginBottom: 22,
+    alignItems: 'center',
+    borderBottomColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    minHeight: 61,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
   },
-  backButton: {
-    alignSelf: 'flex-start',
-    marginBottom: 18,
-    paddingVertical: 6,
-  },
-  backButtonText: {
-    color: '#536dfe',
-    fontSize: 15,
-    fontWeight: '700',
+  closeButton: {
+    alignItems: 'center',
+    height: 44,
+    justifyContent: 'center',
+    left: 18,
+    position: 'absolute',
+    width: 44,
   },
   title: {
-    color: '#172033',
-    fontSize: 32,
+    color: '#171717',
+    fontSize: 20,
     fontWeight: '800',
-    marginBottom: 8,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   description: {
-    color: '#657086',
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
+    color: '#737373',
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 14,
   },
   input: {
-    backgroundColor: '#ffffff',
-    borderColor: '#d8deea',
-    borderRadius: 14,
-    borderWidth: 1,
-    color: '#172033',
-    flex: 1,
+    backgroundColor: '#fafafa',
+    borderColor: '#f5f5f5',
+    borderRadius: 11,
+    borderWidth: 2,
+    color: '#171717',
     fontSize: 16,
-    minHeight: 52,
-    paddingHorizontal: 14,
+    minHeight: 54,
+    paddingHorizontal: 16,
   },
   searchButton: {
     alignItems: 'center',
-    backgroundColor: '#172033',
-    borderRadius: 14,
+    backgroundColor: '#171717',
+    borderRadius: 12,
     justifyContent: 'center',
-    minHeight: 52,
-    minWidth: 82,
-    paddingHorizontal: 16,
+    marginTop: 10,
+    minHeight: 56,
   },
   searchButtonDisabled: {
     opacity: 0.6,
   },
   searchButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
   },
   errorText: {
     color: '#b42318',
     fontSize: 14,
     lineHeight: 21,
-    marginBottom: 10,
+    marginTop: 12,
   },
   successText: {
     color: '#067647',
     fontSize: 14,
     lineHeight: 21,
-    marginBottom: 10,
+    marginTop: 12,
   },
   loadingBox: {
     alignItems: 'center',
@@ -378,126 +410,93 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   loadingText: {
-    color: '#657086',
+    color: '#737373',
     fontSize: 14,
+  },
+  listHeader: {
+    paddingBottom: 4,
+  },
+  debugButtonRow: {
+    flexDirection: 'row',
+    gap: 14,
+    marginBottom: 14,
+  },
+  debugToggleText: {
+    color: '#b42318',
+    fontSize: 12,
+    fontWeight: '700',
   },
   resultList: {
     gap: 10,
     paddingBottom: 32,
   },
-  content: {
-    flex: 1,
-    gap: 20,
-  },
-  sectionTitle: {
-    color: '#172033',
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 10,
-  },
-  friendList: {
-    gap: 10,
-    paddingRight: 24,
-  },
-  friendCard: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: '#e2e7f0',
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    minHeight: 78,
-    padding: 12,
-    width: 250,
-  },
-  friendBadge: {
-    backgroundColor: '#ecfdf3',
-    borderRadius: 999,
-    color: '#067647',
-    fontSize: 13,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  searchResults: {
-    flex: 1,
-  },
   resultCard: {
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    borderColor: '#e2e7f0',
-    borderRadius: 14,
+    borderColor: '#f5f5f5',
+    borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
-    minHeight: 76,
+    minHeight: 82,
     padding: 12,
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: '#e8edff',
+    backgroundColor: '#e5e5e5',
     borderRadius: 24,
     height: 48,
     justifyContent: 'center',
     marginRight: 12,
+    overflow: 'hidden',
     width: 48,
   },
-  avatarText: {
-    color: '#3f57d4',
-    fontSize: 18,
-    fontWeight: '800',
+  avatarImage: {
+    height: '100%',
+    width: '100%',
   },
   profileText: {
     flex: 1,
     marginRight: 12,
   },
   displayName: {
-    color: '#172033',
-    fontSize: 16,
+    color: '#171717',
+    fontSize: 15,
     fontWeight: '800',
     marginBottom: 4,
   },
   userId: {
-    color: '#657086',
-    fontSize: 14,
+    color: '#737373',
+    fontSize: 13,
   },
   addButton: {
     alignItems: 'center',
-    backgroundColor: '#536dfe',
-    borderRadius: 12,
+    backgroundColor: '#171717',
+    borderRadius: 8,
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: 32,
     minWidth: 76,
     paddingHorizontal: 12,
   },
   addButtonDisabled: {
-    backgroundColor: '#98a2b3',
+    backgroundColor: '#a3a3a3',
   },
   addButtonText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   buttonPressed: {
     opacity: 0.82,
   },
   emptyBox: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e2e7f0',
-    borderRadius: 14,
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 16,
     borderWidth: 1,
     padding: 18,
-  },
-  emptyFriendBox: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e2e7f0',
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 18,
-    width: 250,
   },
   emptyText: {
-    color: '#657086',
+    color: '#737373',
     fontSize: 14,
     lineHeight: 21,
   },

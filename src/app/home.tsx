@@ -27,6 +27,9 @@ import {
 } from '@/services/home-feed';
 import type { ProfileIconId } from '@/services/user';
 
+// Flip to true locally to use the dev-only debug tools below. Always false in committed code.
+const SHOW_DEBUG_TOOLS = false;
+
 function getHomeFeedErrorMessage(error: unknown): string {
   if (error instanceof HomeFeedServiceError) {
     switch (error.code) {
@@ -170,8 +173,8 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>ホーム</Text>
 
-          {/* DEV-ONLY: no design, just to preview the feed/blocked-state UI. __DEV__-gated so it never ships. */}
-          {__DEV__ && (
+          {/* DEV-ONLY: no design, just to preview the feed/blocked-state UI. Flip SHOW_DEBUG_TOOLS to true locally to use it. */}
+          {SHOW_DEBUG_TOOLS && (
             <View style={styles.debugButtonRow}>
               <Pressable
                 accessibilityRole="button"

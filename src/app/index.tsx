@@ -16,6 +16,7 @@ const screens = [
   { href: '/timer-test', label: 'タイマーテスト画面' },
   { href: '/alarm-ring-test', label: 'アラーム鳴動テスト画面' },
   { href: '/home', label: 'ホーム画面' },
+  { href: '/friends', label: '友達一覧画面' },
   { href: '/add-friend', label: '友達追加画面' },
   { href: '/alarms', label: 'アラーム一覧画面' },
   { href: '/add-alarm', label: 'アラーム新規作成画面' },

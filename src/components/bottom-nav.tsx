@@ -3,7 +3,7 @@ import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export type BottomNavRoute =
-  '/alarms' | '/home' | '/add-friend' | '/profile-setup';
+  '/alarms' | '/home' | '/friends' | '/profile-setup';
 
 type BottomNavTab = {
   icon: SymbolViewProps['name'];
@@ -23,13 +23,9 @@ const BOTTOM_NAV_TABS: BottomNavTab[] = [
     route: '/home',
   },
   {
-    icon: {
-      ios: 'person.badge.plus',
-      android: 'person_add',
-      web: 'person_add',
-    },
+    icon: { ios: 'person.2', android: 'group', web: 'group' },
     label: '友達',
-    route: '/add-friend',
+    route: '/friends',
   },
   {
     icon: { ios: 'gearshape', android: 'settings', web: 'settings' },

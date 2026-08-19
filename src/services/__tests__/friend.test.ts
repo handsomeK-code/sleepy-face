@@ -12,6 +12,7 @@ import {
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   getUser: vi.fn(),
+  ilike: vi.fn(),
   insert: vi.fn(),
   limit: vi.fn(),
   in: vi.fn(),
@@ -62,11 +63,11 @@ describe('friend service', () => {
     expect(mocks.from).not.toHaveBeenCalled();
   });
 
-  it('searches profiles by public User ID and Display Name', async () => {
+  it('searches profiles by public User ID only', async () => {
     mockAuthenticatedUser();
     mocks.from.mockReturnValue({ select: mocks.select });
-    mocks.select.mockReturnValue({ or: mocks.or });
-    mocks.or.mockReturnValue({ neq: mocks.neq });
+    mocks.select.mockReturnValue({ ilike: mocks.ilike });
+    mocks.ilike.mockReturnValue({ neq: mocks.neq });
     mocks.neq.mockReturnValue({ limit: mocks.limit });
     mocks.limit.mockResolvedValue({
       data: [
@@ -91,6 +92,7 @@ describe('friend service', () => {
       },
     ]);
     expect(mocks.from).toHaveBeenCalledWith('profiles');
+    expect(mocks.ilike).toHaveBeenCalledWith('user_id', 'sleepy%');
     expect(mocks.neq).toHaveBeenCalledWith('id', 'profile-a');
     expect(mocks.limit).toHaveBeenCalledWith(20);
   });

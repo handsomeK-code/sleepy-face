@@ -143,11 +143,11 @@ export async function searchProfiles(
 
   const searchValue = escapePostgrestSearchValue(normalizedQuery.toLowerCase());
 
-  // Public User IDは前方一致、表示名は部分一致で探す。自分自身は候補から外す。
+  // Public User IDの前方一致のみで探す。自分自身は候補から外す。
   const { data, error } = await supabase
     .from('profiles')
     .select('id, user_id, display_name, icon_url, created_at')
-    .or(`user_id.ilike.${searchValue}%,display_name.ilike.%${searchValue}%`)
+    .ilike('user_id', `${searchValue}%`)
     .neq('id', profileId)
     .limit(FRIEND_SEARCH_LIMIT);
 
