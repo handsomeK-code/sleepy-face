@@ -16,7 +16,7 @@ export function ScreenPlaceholder({ title }: ScreenPlaceholderProps) {
 
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.navigate('/')}
+          onPress={() => router.navigate('/dev-menu')}
           style={({ pressed }) => [
             styles.backButton,
             pressed && styles.backButtonPressed,
