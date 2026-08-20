@@ -2,11 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   AlarmServiceError,
+  alarmWillSkipToday,
+  clearAlarmFiredToday,
   clearSavedAlarms,
   createSavedAlarm,
   deleteSavedAlarm,
   getNextAlarmOccurrence,
   listSavedAlarms,
+  recordSavedAlarmFired,
   resyncAllScheduledAlarms,
   setSavedAlarmEnabled,
   updateSavedAlarm,
@@ -51,6 +54,7 @@ function storedAlarm(overrides: Partial<SavedAlarm> = {}): SavedAlarm {
     hour: 7,
     id: 'alarm-1',
     isEnabled: true,
+    lastFiredLocalDay: null,
     minute: 30,
     updatedAt: '2026-08-17T00:00:00.000Z',
     weekdays: [1, 3],
@@ -94,6 +98,7 @@ describe('Saved Alarm service', () => {
       hour: 7,
       id: '00000000-0000-4000-8000-000000000001',
       isEnabled: true,
+      lastFiredLocalDay: null,
       minute: 30,
       updatedAt: '2026-08-17T00:00:00.000Z',
       weekdays: [1, 3, 5],
@@ -106,6 +111,7 @@ describe('Saved Alarm service', () => {
           hour: 7,
           id: '00000000-0000-4000-8000-000000000001',
           isEnabled: true,
+          lastFiredLocalDay: null,
           minute: 30,
           updatedAt: '2026-08-17T00:00:00.000Z',
           weekdays: [1, 3, 5],
@@ -129,6 +135,7 @@ describe('Saved Alarm service', () => {
       hour: 8,
       id: 'alarm-1',
       isEnabled: true,
+      lastFiredLocalDay: null,
       minute: 45,
       updatedAt: '2026-08-18T00:00:00.000Z',
       weekdays: [3],
@@ -333,6 +340,94 @@ describe('Saved Alarm service', () => {
     expect(
       getNextAlarmOccurrence(alarm, new Date('2026-08-19T07:31:00.000')),
     ).toEqual(new Date('2026-08-24T07:30:00.000'));
+  });
+
+  it("skips today's slot when the alarm already fired today, even if the time has not passed yet", () => {
+    const alarm = storedAlarm({
+      hour: 7,
+      lastFiredLocalDay: '2026-08-17',
+      minute: 30,
+      weekdays: [1],
+    });
+
+    expect(
+      getNextAlarmOccurrence(alarm, new Date('2026-08-17T06:00:00.000')),
+    ).toEqual(new Date('2026-08-24T07:30:00.000'));
+  });
+
+  it('does not skip today when a different day was recorded as fired', () => {
+    const alarm = storedAlarm({
+      hour: 7,
+      lastFiredLocalDay: '2026-08-10',
+      minute: 30,
+      weekdays: [1],
+    });
+
+    expect(
+      getNextAlarmOccurrence(alarm, new Date('2026-08-17T06:00:00.000')),
+    ).toEqual(new Date('2026-08-17T07:30:00.000'));
+  });
+
+  it('reports whether an alarm will skip today', () => {
+    const firedTodayAlarm = storedAlarm({
+      lastFiredLocalDay: '2026-08-17',
+      weekdays: [1, 3],
+    });
+    const notFiredAlarm = storedAlarm({
+      lastFiredLocalDay: null,
+      weekdays: [1, 3],
+    });
+    const disabledAlarm = storedAlarm({
+      isEnabled: false,
+      lastFiredLocalDay: '2026-08-17',
+      weekdays: [1, 3],
+    });
+    const otherWeekdayAlarm = storedAlarm({
+      lastFiredLocalDay: '2026-08-17',
+      weekdays: [2],
+    });
+    const now = new Date('2026-08-17T06:00:00.000');
+
+    expect(alarmWillSkipToday(firedTodayAlarm, now)).toBe(true);
+    expect(alarmWillSkipToday(notFiredAlarm, now)).toBe(false);
+    expect(alarmWillSkipToday(disabledAlarm, now)).toBe(false);
+    expect(alarmWillSkipToday(otherWeekdayAlarm, now)).toBe(false);
+  });
+
+  it('records that a Saved Alarm fired today and resyncs it', async () => {
+    mocks.getItem.mockResolvedValue(JSON.stringify([storedAlarm()]));
+    vi.setSystemTime(new Date('2026-08-17T07:30:00.000Z'));
+
+    const updated = await recordSavedAlarmFired('alarm-1');
+
+    expect(updated).toMatchObject({ lastFiredLocalDay: '2026-08-17' });
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).toHaveBeenCalledWith(
+      'alarm-1',
+      expect.any(Number),
+    );
+  });
+
+  it('is a safe no-op recording a fire for an unknown alarm id (e.g. the dev test alarm)', async () => {
+    mocks.getItem.mockResolvedValue(JSON.stringify([storedAlarm()]));
+
+    await expect(recordSavedAlarmFired('unknown-id')).resolves.toBeNull();
+    expect(mocks.setItem).not.toHaveBeenCalled();
+  });
+
+  it('clears the fired-today state on a Saved Alarm', async () => {
+    mocks.getItem.mockResolvedValue(
+      JSON.stringify([storedAlarm({ lastFiredLocalDay: '2026-08-17' })]),
+    );
+
+    const cleared = await clearAlarmFiredToday('alarm-1');
+
+    expect(cleared).toMatchObject({ lastFiredLocalDay: null });
+  });
+
+  it('throws a typed error clearing the fired-today state for a missing alarm', async () => {
+    await expect(clearAlarmFiredToday('missing')).rejects.toMatchObject({
+      code: 'saved_alarm_not_found',
+    });
   });
 
   it('schedules a native occurrence for a newly created Saved Alarm', async () => {

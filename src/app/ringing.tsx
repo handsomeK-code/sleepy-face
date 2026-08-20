@@ -26,6 +26,7 @@ import {
   startTimerFromStartedAt,
   useAlarmTimer,
 } from '@/services/alarm-timer';
+import { recordSavedAlarmFired } from '@/services/alarm';
 import { startWakeChallengeAttempt } from '@/services/wake-challenge-attempt';
 
 function getErrorMessage(error: unknown): string {
@@ -107,6 +108,12 @@ export default function RingingScreen() {
 
     return () => heartbeat.stop();
   }, [pulse]);
+
+  useEffect(() => {
+    if (params.alarmId) {
+      recordSavedAlarmFired(params.alarmId).catch(() => {});
+    }
+  }, [params.alarmId]);
 
   useEffect(() => {
     let isActive = true;

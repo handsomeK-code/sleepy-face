@@ -19,6 +19,8 @@ import {
 } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
+  alarmWillSkipToday,
+  clearAlarmFiredToday,
   listSavedAlarms,
   setSavedAlarmEnabled,
   type SavedAlarm,
@@ -213,6 +215,21 @@ export default function AlarmsScreen() {
     }
   }, []);
 
+  const handleClearFiredToday = useCallback(async (alarmId: string) => {
+    setErrorMessage(null);
+
+    try {
+      const updatedAlarm = await clearAlarmFiredToday(alarmId);
+      setAlarms((currentAlarms) =>
+        currentAlarms.map((currentAlarm) =>
+          currentAlarm.id === updatedAlarm.id ? updatedAlarm : currentAlarm,
+        ),
+      );
+    } catch (error) {
+      setErrorMessage(getAlarmErrorMessage(error));
+    }
+  }, []);
+
   const renderItem: ListRenderItem<SavedAlarm> = ({ item }) => {
     const isUpdating = updatingAlarmId === item.id;
 
@@ -259,6 +276,25 @@ export default function AlarmsScreen() {
           >
             {formatWeekdays(item.weekdays)}
           </Text>
+
+          {alarmWillSkipToday(item) && (
+            <Text style={styles.skipTodayText}>
+              今日は鳴りません。次回は来週鳴ります。
+            </Text>
+          )}
+
+          {isDevMode && item.lastFiredLocalDay && (
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={(event) => {
+                event.stopPropagation();
+                void handleClearFiredToday(item.id);
+              }}
+            >
+              <Text style={styles.debugToggleText}>[DEV] 制限解除</Text>
+            </Pressable>
+          )}
         </View>
 
         <Pressable
@@ -451,6 +487,12 @@ const styles = StyleSheet.create({
   },
   alarmTextDisabled: {
     color: '#737373',
+  },
+  skipTodayText: {
+    color: '#b45309',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 6,
   },
   switchTrack: {
     borderRadius: 999,
