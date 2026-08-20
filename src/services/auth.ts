@@ -142,6 +142,24 @@ export async function startGoogleLogin(): Promise<GoogleLoginResult> {
   }
 }
 
+export class SignOutError extends Error {
+  constructor(
+    message: string,
+    public readonly cause?: unknown,
+  ) {
+    super(message);
+    this.name = 'SignOutError';
+  }
+}
+
+export async function signOut(): Promise<void> {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    throw new SignOutError('Sign out failed.', error);
+  }
+}
+
 export async function getCurrentUserId(): Promise<string | null> {
   const { data, error } = await supabase.auth.getUser();
 
