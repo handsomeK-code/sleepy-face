@@ -47,6 +47,14 @@ class AlarmRingingModule : Module() {
       cancelScheduledTestAlarm()
     }
 
+    AsyncFunction("scheduleSavedAlarmOccurrence") { alarmId: String, triggerAtMillis: Long ->
+      scheduleSavedAlarmOccurrence(alarmId, triggerAtMillis)
+    }
+
+    AsyncFunction("cancelSavedAlarmOccurrence") { alarmId: String ->
+      cancelSavedAlarmOccurrence(alarmId)
+    }
+
     AsyncFunction("getRingingAlarmState") {
       getRingingAlarmState()
     }
@@ -165,6 +173,88 @@ class AlarmRingingModule : Module() {
 
   private fun cancelScheduledTestAlarm() {
     alarmManager.cancel(createTestAlarmPendingIntent(null, null))
+  }
+
+  private fun scheduleSavedAlarmOccurrence(
+    alarmId: String,
+    triggerAtMillis: Long,
+  ): Map<String, String> {
+    // Cancel any previously scheduled occurrence for this alarm ID first, before the
+    // permission checks below. This way a failed reschedule (e.g. permission revoked)
+    // never leaves a stale occurrence armed for the alarm's OLD time.
+    cancelSavedAlarmOccurrence(alarmId)
+
+    if (!canScheduleExactAlarms()) {
+      throw ExactAlarmUnavailableException()
+    }
+
+    if (getNotificationPermissionStatus() != "granted") {
+      throw NotificationPermissionDeniedException()
+    }
+
+    val scheduledFor = Instant.ofEpochMilli(triggerAtMillis).toString()
+    val pendingIntent = createSavedAlarmPendingIntent(alarmId, scheduledFor)
+    val alarmClockInfo = AlarmManager.AlarmClockInfo(
+      triggerAtMillis,
+      createSavedAlarmShowIntent(alarmId, scheduledFor),
+    )
+
+    alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+
+    return mapOf(
+      "alarmId" to alarmId,
+      "scheduledFor" to scheduledFor,
+    )
+  }
+
+  private fun cancelSavedAlarmOccurrence(alarmId: String) {
+    alarmManager.cancel(createSavedAlarmPendingIntent(alarmId, null))
+  }
+
+  // hashCode() collisions would silently make two Saved Alarms share a PendingIntent.
+  // Accepted here because the app enforces at most one Saved Alarm per weekday (7 max
+  // concurrent alarms), making a 32-bit hash collision astronomically unlikely; a
+  // persistent alarmId -> requestCode allocation table would be needed to fully rule
+  // it out for an unbounded alarm count.
+  private fun requestCodeForSavedAlarm(alarmId: String): Int = alarmId.hashCode()
+
+  private fun createSavedAlarmPendingIntent(
+    alarmId: String,
+    scheduledFor: String?,
+  ): PendingIntent {
+    val intent = Intent(context, AlarmRingingReceiver::class.java).apply {
+      action = ACTION_FIRE_SAVED_ALARM
+      putExtra(EXTRA_ALARM_ID, alarmId)
+      scheduledFor?.let { putExtra(EXTRA_SCHEDULED_FOR, it) }
+    }
+
+    return PendingIntent.getBroadcast(
+      context,
+      requestCodeForSavedAlarm(alarmId),
+      intent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+  }
+
+  private fun createSavedAlarmShowIntent(alarmId: String, scheduledFor: String): PendingIntent {
+    val ringingUri = Uri.parse("sleepyface:///ringing")
+      .buildUpon()
+      .appendQueryParameter(EXTRA_ALARM_ID, alarmId)
+      .appendQueryParameter(EXTRA_SCHEDULED_FOR, scheduledFor)
+      .build()
+
+    val launchIntent = Intent(Intent.ACTION_VIEW, ringingUri).setPackage(context.packageName)
+
+    launchIntent.apply {
+      flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+
+    return PendingIntent.getActivity(
+      context,
+      requestCodeForSavedAlarm(alarmId),
+      launchIntent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
   }
 
   private fun getRingingAlarmState(): Map<String, String>? {

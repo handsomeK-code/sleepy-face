@@ -7,6 +7,7 @@ import {
   deleteSavedAlarm,
   getNextAlarmOccurrence,
   listSavedAlarms,
+  resyncAllScheduledAlarms,
   setSavedAlarmEnabled,
   updateSavedAlarm,
   type SavedAlarm,
@@ -18,12 +19,22 @@ const mocks = vi.hoisted(() => ({
   setItem: vi.fn(),
 }));
 
+const alarmMechanicsMocks = vi.hoisted(() => ({
+  cancelAlarmOccurrence: vi.fn(),
+  scheduleAlarmOccurrence: vi.fn(),
+}));
+
 vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {
     getItem: mocks.getItem,
     removeItem: mocks.removeItem,
     setItem: mocks.setItem,
   },
+}));
+
+vi.mock('../android-alarm-mechanics', () => ({
+  cancelAlarmOccurrence: alarmMechanicsMocks.cancelAlarmOccurrence,
+  scheduleAlarmOccurrence: alarmMechanicsMocks.scheduleAlarmOccurrence,
 }));
 
 function expectAlarmServiceError(
@@ -55,6 +66,11 @@ describe('Saved Alarm service', () => {
     mocks.getItem.mockResolvedValue(null);
     mocks.removeItem.mockResolvedValue(undefined);
     mocks.setItem.mockResolvedValue(undefined);
+    alarmMechanicsMocks.cancelAlarmOccurrence.mockResolvedValue(undefined);
+    alarmMechanicsMocks.scheduleAlarmOccurrence.mockResolvedValue({
+      alarmId: 'unused',
+      scheduledFor: 'unused',
+    });
   });
 
   it('lists an empty array when no Saved Alarms are stored', async () => {
@@ -317,5 +333,196 @@ describe('Saved Alarm service', () => {
     expect(
       getNextAlarmOccurrence(alarm, new Date('2026-08-19T07:31:00.000')),
     ).toEqual(new Date('2026-08-24T07:30:00.000'));
+  });
+
+  it('schedules a native occurrence for a newly created Saved Alarm', async () => {
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(
+      '00000000-0000-4000-8000-000000000001',
+    );
+
+    const created = await createSavedAlarm({
+      hour: 7,
+      minute: 30,
+      weekdays: [1, 3],
+    });
+
+    const expectedNext = getNextAlarmOccurrence(created);
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).toHaveBeenCalledWith(
+      '00000000-0000-4000-8000-000000000001',
+      expectedNext.getTime(),
+    );
+    expect(alarmMechanicsMocks.cancelAlarmOccurrence).not.toHaveBeenCalled();
+  });
+
+  it('reschedules a Saved Alarm to its new time on update', async () => {
+    mocks.getItem.mockResolvedValue(JSON.stringify([storedAlarm()]));
+
+    const updated = await updateSavedAlarm('alarm-1', {
+      hour: 8,
+      minute: 45,
+      weekdays: [3],
+    });
+
+    const expectedNext = getNextAlarmOccurrence(updated);
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).toHaveBeenCalledWith(
+      'alarm-1',
+      expectedNext.getTime(),
+    );
+  });
+
+  it('cancels a disabled Saved Alarm and reschedules it once re-enabled', async () => {
+    mocks.getItem.mockResolvedValue(JSON.stringify([storedAlarm()]));
+
+    await setSavedAlarmEnabled('alarm-1', false);
+    expect(alarmMechanicsMocks.cancelAlarmOccurrence).toHaveBeenCalledWith(
+      'alarm-1',
+    );
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).not.toHaveBeenCalled();
+
+    alarmMechanicsMocks.cancelAlarmOccurrence.mockClear();
+    mocks.getItem.mockResolvedValue(
+      JSON.stringify([storedAlarm({ isEnabled: false })]),
+    );
+
+    const reEnabled = await setSavedAlarmEnabled('alarm-1', true);
+    const expectedNext = getNextAlarmOccurrence(reEnabled);
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).toHaveBeenCalledWith(
+      'alarm-1',
+      expectedNext.getTime(),
+    );
+  });
+
+  it('cancels a Saved Alarm native occurrence on delete without rescheduling', async () => {
+    mocks.getItem.mockResolvedValue(JSON.stringify([storedAlarm()]));
+
+    await deleteSavedAlarm('alarm-1');
+
+    expect(alarmMechanicsMocks.cancelAlarmOccurrence).toHaveBeenCalledWith(
+      'alarm-1',
+    );
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).not.toHaveBeenCalled();
+  });
+
+  it('syncs only the mutated Saved Alarm, leaving other alarms untouched', async () => {
+    mocks.getItem.mockResolvedValue(
+      JSON.stringify([storedAlarm({ id: 'alarm-1', weekdays: [1] })]),
+    );
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(
+      '00000000-0000-4000-8000-000000000002',
+    );
+
+    await createSavedAlarm({ hour: 6, minute: 0, weekdays: [2] });
+
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).toHaveBeenCalledWith(
+      '00000000-0000-4000-8000-000000000002',
+      expect.any(Number),
+    );
+    expect(alarmMechanicsMocks.cancelAlarmOccurrence).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a native scheduling failure as a typed error without ever writing the stored alarm', async () => {
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(
+      '00000000-0000-4000-8000-000000000001',
+    );
+    alarmMechanicsMocks.scheduleAlarmOccurrence.mockRejectedValueOnce(
+      Object.assign(new Error('Exact alarm unavailable'), {
+        code: 'exact_alarm_unavailable',
+      }),
+    );
+
+    await expect(
+      createSavedAlarm({ hour: 7, minute: 30, weekdays: [1] }),
+    ).rejects.toMatchObject({ code: 'alarm_scheduling_failed' });
+
+    expect(mocks.setItem).not.toHaveBeenCalled();
+  });
+
+  it('does not persist a Saved Alarm edit when native rescheduling fails, keeping the prior stored time', async () => {
+    mocks.getItem.mockResolvedValue(JSON.stringify([storedAlarm()]));
+    alarmMechanicsMocks.scheduleAlarmOccurrence.mockRejectedValueOnce(
+      Object.assign(new Error('Exact alarm unavailable'), {
+        code: 'exact_alarm_unavailable',
+      }),
+    );
+
+    await expect(
+      updateSavedAlarm('alarm-1', { hour: 8, minute: 45, weekdays: [3] }),
+    ).rejects.toMatchObject({ code: 'alarm_scheduling_failed' });
+
+    expect(mocks.setItem).not.toHaveBeenCalled();
+  });
+
+  it('does not persist a delete when the native cancel fails, keeping the alarm listed', async () => {
+    mocks.getItem.mockResolvedValue(JSON.stringify([storedAlarm()]));
+    alarmMechanicsMocks.cancelAlarmOccurrence.mockRejectedValueOnce(
+      Object.assign(new Error('Native error'), {
+        code: 'native_alarm_error',
+      }),
+    );
+
+    await expect(deleteSavedAlarm('alarm-1')).rejects.toMatchObject({
+      code: 'alarm_scheduling_failed',
+    });
+
+    expect(mocks.setItem).not.toHaveBeenCalled();
+  });
+
+  it('resyncs every enabled Saved Alarm and skips disabled ones', async () => {
+    mocks.getItem.mockResolvedValue(
+      JSON.stringify([
+        storedAlarm({ id: 'enabled-1', isEnabled: true, weekdays: [1] }),
+        storedAlarm({ id: 'disabled-1', isEnabled: false, weekdays: [2] }),
+        storedAlarm({ id: 'enabled-2', isEnabled: true, weekdays: [3] }),
+      ]),
+    );
+
+    await expect(resyncAllScheduledAlarms()).resolves.toBeUndefined();
+
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).toHaveBeenCalledTimes(
+      2,
+    );
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).toHaveBeenCalledWith(
+      'enabled-1',
+      expect.any(Number),
+    );
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).toHaveBeenCalledWith(
+      'enabled-2',
+      expect.any(Number),
+    );
+    expect(alarmMechanicsMocks.cancelAlarmOccurrence).not.toHaveBeenCalled();
+  });
+
+  it('resyncs remaining Saved Alarms even when one fails to schedule', async () => {
+    mocks.getItem.mockResolvedValue(
+      JSON.stringify([
+        storedAlarm({ id: 'broken', isEnabled: true, weekdays: [1] }),
+        storedAlarm({ id: 'ok', isEnabled: true, weekdays: [2] }),
+      ]),
+    );
+    alarmMechanicsMocks.scheduleAlarmOccurrence.mockImplementation(
+      async (alarmId: string) => {
+        if (alarmId === 'broken') {
+          throw Object.assign(new Error('Exact alarm unavailable'), {
+            code: 'exact_alarm_unavailable',
+          });
+        }
+
+        return { alarmId, scheduledFor: 'unused' };
+      },
+    );
+
+    await expect(resyncAllScheduledAlarms()).resolves.toBeUndefined();
+
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).toHaveBeenCalledWith(
+      'broken',
+      expect.any(Number),
+    );
+    expect(alarmMechanicsMocks.scheduleAlarmOccurrence).toHaveBeenCalledWith(
+      'ok',
+      expect.any(Number),
+    );
   });
 });

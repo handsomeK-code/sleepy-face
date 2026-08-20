@@ -1,5 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import {
+  cancelAlarmOccurrence,
+  scheduleAlarmOccurrence,
+} from './android-alarm-mechanics';
+
 const SAVED_ALARMS_STORAGE_KEY = 'sleepy-face:saved-alarms';
 
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -21,6 +26,7 @@ export type SaveAlarmInput = {
 };
 
 export type AlarmServiceErrorCode =
+  | 'alarm_scheduling_failed'
   | 'invalid_alarm_input'
   | 'saved_alarm_not_found'
   | 'storage_clear_failed'
@@ -313,6 +319,46 @@ function compareSavedAlarmsByNextOccurrence(
   return left.id.localeCompare(right.id);
 }
 
+async function syncScheduledAlarm(alarm: SavedAlarm): Promise<void> {
+  try {
+    if (!alarm.isEnabled) {
+      await cancelAlarmOccurrence(alarm.id);
+      return;
+    }
+
+    const nextOccurrence = getNextAlarmOccurrence(alarm);
+    await scheduleAlarmOccurrence(alarm.id, nextOccurrence.getTime());
+  } catch (error) {
+    throw new AlarmServiceError(
+      'alarm_scheduling_failed',
+      "Could not sync the Saved Alarm with this device's alarm scheduler.",
+      error,
+    );
+  }
+}
+
+async function cancelScheduledAlarm(alarmId: string): Promise<void> {
+  try {
+    await cancelAlarmOccurrence(alarmId);
+  } catch (error) {
+    throw new AlarmServiceError(
+      'alarm_scheduling_failed',
+      "Could not cancel the Saved Alarm on this device's alarm scheduler.",
+      error,
+    );
+  }
+}
+
+export async function resyncAllScheduledAlarms(): Promise<void> {
+  const savedAlarms = await readSavedAlarms();
+
+  await Promise.allSettled(
+    savedAlarms
+      .filter((alarm) => alarm.isEnabled)
+      .map((alarm) => syncScheduledAlarm(alarm)),
+  );
+}
+
 export async function listSavedAlarms(): Promise<SavedAlarm[]> {
   const savedAlarms = await readSavedAlarms();
   const now = new Date();
@@ -341,6 +387,7 @@ export async function createSavedAlarm(
     weekdays: validatedInput.weekdays,
   };
 
+  await syncScheduledAlarm(savedAlarm);
   await writeSavedAlarms([...savedAlarms, savedAlarm]);
 
   return savedAlarm;
@@ -372,6 +419,7 @@ export async function updateSavedAlarm(
     weekdays: validatedInput.weekdays,
   };
 
+  await syncScheduledAlarm(updatedAlarm);
   await writeSavedAlarms(
     savedAlarms.map((alarm) => (alarm.id === id ? updatedAlarm : alarm)),
   );
@@ -399,6 +447,7 @@ export async function setSavedAlarmEnabled(
     updatedAt: new Date().toISOString(),
   };
 
+  await syncScheduledAlarm(updatedAlarm);
   await writeSavedAlarms(
     savedAlarms.map((alarm) => (alarm.id === id ? updatedAlarm : alarm)),
   );
@@ -417,6 +466,7 @@ export async function deleteSavedAlarm(id: string): Promise<void> {
     );
   }
 
+  await cancelScheduledAlarm(id);
   await writeSavedAlarms(nextSavedAlarms);
 }
 

@@ -7,7 +7,9 @@ import androidx.core.content.ContextCompat
 
 class AlarmRingingReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context, intent: Intent) {
-    if (intent.action != ACTION_FIRE_TEST_ALARM) {
+    val action = intent.action
+
+    if (action != ACTION_FIRE_TEST_ALARM && action != ACTION_FIRE_SAVED_ALARM) {
       return
     }
 
@@ -15,7 +17,7 @@ class AlarmRingingReceiver : BroadcastReceiver() {
     val scheduledFor = intent.getStringExtra(EXTRA_SCHEDULED_FOR) ?: return
 
     val serviceIntent = Intent(context, AlarmRingingService::class.java).apply {
-      action = ACTION_FIRE_TEST_ALARM
+      this.action = action
       putExtra(EXTRA_ALARM_ID, alarmId)
       putExtra(EXTRA_SCHEDULED_FOR, scheduledFor)
     }

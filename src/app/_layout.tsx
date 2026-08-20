@@ -1,6 +1,8 @@
 import { Stack, router, usePathname } from 'expo-router';
 import { useEffect } from 'react';
+import { AppRegistry } from 'react-native';
 
+import { resyncAllScheduledAlarms } from '@/services/alarm';
 import { getCurrentUserId } from '@/services/auth';
 import { getMyProfile } from '@/services/user';
 import {
@@ -8,6 +10,13 @@ import {
   getAbandonedWakeChallengeAttemptOutcome,
   getWakeChallengeAttempt,
 } from '@/services/wake-challenge-attempt';
+
+const SAVED_ALARM_BOOT_RESYNC_TASK_NAME = 'SavedAlarmBootResync';
+
+AppRegistry.registerHeadlessTask(
+  SAVED_ALARM_BOOT_RESYNC_TASK_NAME,
+  () => () => resyncAllScheduledAlarms(),
+);
 
 const DEV_INDEX_ROUTE = '/';
 const DEV_TEST_ROUTES = new Set([

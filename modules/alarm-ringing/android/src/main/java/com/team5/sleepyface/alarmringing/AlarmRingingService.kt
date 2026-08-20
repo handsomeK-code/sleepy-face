@@ -14,8 +14,11 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import java.time.Instant
+
+private const val LOG_TAG = "AlarmRingingService"
 
 class AlarmRingingService : Service() {
   private val handler = Handler(Looper.getMainLooper())
@@ -29,7 +32,7 @@ class AlarmRingingService : Service() {
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     when (intent?.action) {
-      ACTION_FIRE_TEST_ALARM -> {
+      ACTION_FIRE_TEST_ALARM, ACTION_FIRE_SAVED_ALARM -> {
         val alarmId = intent.getStringExtra(EXTRA_ALARM_ID) ?: return START_NOT_STICKY
         startRinging(alarmId)
       }
@@ -72,21 +75,77 @@ class AlarmRingingService : Service() {
   private fun playDefaultAlarmTone() {
     stopDefaultAlarmTone()
 
-    val alarmToneUri: Uri =
-      RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-        ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+    // On some OEM builds (observed on Samsung One UI), RingtoneManager.getDefaultUri()
+    // internally triggers a lazy write to Settings.System the first time it resolves the
+    // default alarm/notification tone, which throws SecurityException without
+    // WRITE_SETTINGS (an app should never need to hold that permission just to read a
+    // default tone). Guard every step so a tone-resolution/playback failure silences the
+    // alarm sound instead of crashing the whole ringing service.
+    val alarmToneUri = resolveAlarmToneUri()
 
-    mediaPlayer = MediaPlayer().apply {
-      setAudioAttributes(
+    if (alarmToneUri == null) {
+      Log.e(LOG_TAG, "No alarm tone URI could be resolved; ringing silently.")
+      return
+    }
+
+    val player = MediaPlayer()
+
+    try {
+      player.setAudioAttributes(
         AudioAttributes.Builder()
           .setUsage(AudioAttributes.USAGE_ALARM)
           .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
           .build(),
       )
-      setDataSource(applicationContext, alarmToneUri)
-      isLooping = true
-      prepare()
-      start()
+      player.setDataSource(applicationContext, alarmToneUri)
+      player.isLooping = true
+      player.prepare()
+      player.start()
+      mediaPlayer = player
+    } catch (error: Exception) {
+      Log.e(LOG_TAG, "Failed to play alarm tone $alarmToneUri; ringing silently.", error)
+      player.release()
+      mediaPlayer = null
+    }
+  }
+
+  private fun resolveAlarmToneUri(): Uri? {
+    // Deliberately avoid RingtoneManager.getDefaultUri()/getActualDefaultRingtoneUri():
+    // on some OEM builds (observed on Samsung One UI) resolving "the default" tone lazily
+    // writes a Settings.System init value the first time it's touched, which throws
+    // SecurityException without WRITE_SETTINGS (an app should never need that permission
+    // just to read a tone) -- and it's non-deterministic, since MediaPlayer.setDataSource()
+    // triggers the same resolution internally even when getDefaultUri() itself didn't throw.
+    // Querying the ringtone database directly for an already-resolved URI sidesteps that
+    // "default" resolution path entirely.
+    return safeGetFirstRingtoneUri(RingtoneManager.TYPE_ALARM)
+      ?: safeGetFirstRingtoneUri(RingtoneManager.TYPE_NOTIFICATION)
+      ?: safeGetValidRingtoneUri()
+  }
+
+  private fun safeGetFirstRingtoneUri(type: Int): Uri? {
+    return try {
+      val manager = RingtoneManager(applicationContext)
+      manager.setType(type)
+      val cursor = manager.cursor
+
+      if (!cursor.moveToFirst()) {
+        return null
+      }
+
+      manager.getRingtoneUri(cursor.position)
+    } catch (error: Exception) {
+      Log.e(LOG_TAG, "Querying ringtones for type $type failed", error)
+      null
+    }
+  }
+
+  private fun safeGetValidRingtoneUri(): Uri? {
+    return try {
+      RingtoneManager.getValidRingtoneUri(applicationContext)
+    } catch (error: Exception) {
+      Log.e(LOG_TAG, "getValidRingtoneUri() failed", error)
+      null
     }
   }
 
@@ -104,7 +163,7 @@ class AlarmRingingService : Service() {
     NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
       .setSmallIcon(applicationInfo.icon)
       .setContentTitle("Alarm ringing")
-      .setContentText("Test alarm is ringing.")
+      .setContentText("Alarm is ringing.")
       .setCategory(NotificationCompat.CATEGORY_ALARM)
       .setPriority(NotificationCompat.PRIORITY_MAX)
       .setOngoing(true)
