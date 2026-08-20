@@ -12,7 +12,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
-import { scheduleAlarmOccurrence } from '@/services/android-alarm-mechanics';
+import {
+  AndroidAlarmMechanicsError,
+  canScheduleExactAlarms,
+  getNotificationPermissionStatus,
+  openExactAlarmSettings,
+  requestNotificationPermission,
+  scheduleAlarmOccurrence,
+} from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
   listSavedAlarms,
@@ -154,6 +161,27 @@ export default function AlarmsScreen() {
     setIsSchedulingTestAlarm(true);
 
     try {
+      const notificationStatus = await getNotificationPermissionStatus();
+
+      if (notificationStatus !== 'granted') {
+        const nextNotificationStatus = await requestNotificationPermission();
+
+        if (nextNotificationStatus !== 'granted') {
+          setTestAlarmMessage(
+            '通知の権限が必要です。許可してからもう一度お試しください。',
+          );
+          return;
+        }
+      }
+
+      if (!(await canScheduleExactAlarms())) {
+        await openExactAlarmSettings();
+        setTestAlarmMessage(
+          '「アラームとリマインダー」の権限を許可してから、もう一度お試しください。',
+        );
+        return;
+      }
+
       const schedule = await scheduleAlarmOccurrence(
         TEST_ALARM_ID,
         Date.now() + TEST_ALARM_DELAY_MS,
@@ -163,8 +191,14 @@ export default function AlarmsScreen() {
         { hour: '2-digit', minute: '2-digit', second: '2-digit' },
       );
       setTestAlarmMessage(`テストアラームを ${scheduledTime} に設定しました。`);
-    } catch {
-      setTestAlarmMessage('テストアラームを設定できませんでした。');
+    } catch (error) {
+      const detail =
+        error instanceof AndroidAlarmMechanicsError
+          ? error.code
+          : error instanceof Error
+            ? error.message
+            : String(error);
+      setTestAlarmMessage(`テストアラームを設定できませんでした。(${detail})`);
     } finally {
       setIsSchedulingTestAlarm(false);
     }
