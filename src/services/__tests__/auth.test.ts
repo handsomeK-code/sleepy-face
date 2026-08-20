@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   GoogleLoginError,
+  SignOutError,
   coolDownGoogleLogin,
   extractOAuthTokensFromUrl,
   getCurrentUserId,
   onAuthStateChange as subscribeToAuthState,
+  signOut,
   startGoogleLogin,
   warmUpGoogleLogin,
 } from '../auth';
@@ -17,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   openAuthSessionAsync: vi.fn(),
   setSession: vi.fn(),
   signInWithOAuth: vi.fn(),
+  signOut: vi.fn(),
   warmUpAsync: vi.fn(),
 }));
 
@@ -27,6 +30,7 @@ vi.mock('@/lib/supabase', () => ({
       onAuthStateChange: mocks.onAuthStateChange,
       setSession: mocks.setSession,
       signInWithOAuth: mocks.signInWithOAuth,
+      signOut: mocks.signOut,
     },
   },
 }));
@@ -258,6 +262,21 @@ describe('Google Login service', () => {
     });
 
     await expect(getCurrentUserId()).resolves.toBeNull();
+  });
+
+  it('signs out through Supabase', async () => {
+    mocks.signOut.mockResolvedValue({ error: null });
+
+    await expect(signOut()).resolves.toBeUndefined();
+    expect(mocks.signOut).toHaveBeenCalledOnce();
+  });
+
+  it('throws a typed error when Supabase sign-out fails', async () => {
+    mocks.signOut.mockResolvedValue({ error: new Error('sign-out failed') });
+
+    await signOut().catch((error: unknown) => {
+      expect(error).toBeInstanceOf(SignOutError);
+    });
   });
 
   it('maps auth state changes to Auth User ID presence', () => {

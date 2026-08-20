@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,6 +19,7 @@ import {
   PROFILE_ICON_LABELS,
   PROFILE_ICON_SOURCES,
 } from '@/constants/profile-icons';
+import { signOut } from '@/services/auth';
 import { getDevMode, setDevMode } from '@/services/dev-mode';
 import {
   ProfilePhotosServiceError,
@@ -91,6 +93,7 @@ export default function ProfileScreen() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<MyFailurePhoto | null>(
     null,
   );
@@ -178,6 +181,20 @@ export default function ProfileScreen() {
     setIsDevMode(true);
   }, []);
 
+  const handleSignOut = useCallback(async () => {
+    setErrorMessage(null);
+    setIsSigningOut(true);
+
+    try {
+      await signOut();
+      router.replace('/signin');
+    } catch {
+      setErrorMessage('ログアウトできませんでした。もう一度お試しください。');
+    } finally {
+      setIsSigningOut(false);
+    }
+  }, []);
+
   const renderPhotoItem: ListRenderItem<MyFailurePhoto> = ({ item }) => (
     <Pressable
       accessibilityRole="button"
@@ -200,7 +217,7 @@ export default function ProfileScreen() {
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Text style={styles.title}>プロフィール</Text>
+          <Text style={styles.title}>設定</Text>
 
           {isDevUserId(profile?.userId) && !isDevMode && (
             <Pressable accessibilityRole="button" onPress={handleEnableDevMode}>
@@ -309,6 +326,21 @@ export default function ProfileScreen() {
                   {successMessage && (
                     <Text style={styles.successText}>{successMessage}</Text>
                   )}
+
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={isSigningOut}
+                    onPress={handleSignOut}
+                    style={({ pressed }) => [
+                      styles.signOutButton,
+                      pressed && styles.buttonPressed,
+                      isSigningOut && styles.saveButtonDisabled,
+                    ]}
+                  >
+                    <Text style={styles.signOutButtonText}>
+                      {isSigningOut ? 'ログアウト中...' : 'ログアウト'}
+                    </Text>
+                  </Pressable>
 
                   <Text style={styles.sectionTitle}>失敗の記録</Text>
                 </View>
@@ -482,6 +514,21 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.82,
+  },
+  signOutButton: {
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: 'center',
+    marginTop: 12,
+    minHeight: 56,
+  },
+  signOutButtonText: {
+    color: '#b42318',
+    fontSize: 16,
+    fontWeight: '700',
   },
   errorText: {
     color: '#b42318',
