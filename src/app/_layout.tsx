@@ -25,6 +25,10 @@ const DEV_TEST_ROUTES = new Set([
   '/timer-test',
 ]);
 const AUTH_ROUTES = new Set(['/signin', '/signup']);
+// The Google OAuth redirect (sleepyface://google-auth) lands here before the Supabase
+// session is necessarily set — signin.tsx's own handler owns the post-login redirect once
+// login actually resolves, so the gate must not race ahead and bounce back to /signin.
+const OAUTH_CALLBACK_ROUTE = '/google-auth';
 
 function isAuthRoute(pathname: string): boolean {
   return AUTH_ROUTES.has(pathname);
@@ -35,7 +39,11 @@ function isInitialSetupRoute(pathname: string): boolean {
 }
 
 function shouldSkipProfileGate(pathname: string): boolean {
-  return pathname === DEV_INDEX_ROUTE || DEV_TEST_ROUTES.has(pathname);
+  return (
+    pathname === DEV_INDEX_ROUTE ||
+    pathname === OAUTH_CALLBACK_ROUTE ||
+    DEV_TEST_ROUTES.has(pathname)
+  );
 }
 
 let hasCheckedAbandonedWakeChallengeAttempt = false;
