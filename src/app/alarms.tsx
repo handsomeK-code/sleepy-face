@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
+import { scheduleAlarmOccurrence } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
   listSavedAlarms,
@@ -19,6 +20,9 @@ import {
   type SavedAlarm,
   type Weekday,
 } from '@/services/alarm';
+
+const TEST_ALARM_ID = 'dev-test-alarm-1-minute';
+const TEST_ALARM_DELAY_MS = 60_000;
 
 const WEEKDAY_LABELS: Record<Weekday, string> = {
   0: '日',
@@ -73,6 +77,8 @@ export default function AlarmsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [updatingAlarmId, setUpdatingAlarmId] = useState<string | null>(null);
+  const [isSchedulingTestAlarm, setIsSchedulingTestAlarm] = useState(false);
+  const [testAlarmMessage, setTestAlarmMessage] = useState<string | null>(null);
 
   const loadAlarms = useCallback(async () => {
     setErrorMessage(null);
@@ -142,6 +148,27 @@ export default function AlarmsScreen() {
     },
     [alarms],
   );
+
+  const handleScheduleTestAlarm = useCallback(async () => {
+    setTestAlarmMessage(null);
+    setIsSchedulingTestAlarm(true);
+
+    try {
+      const schedule = await scheduleAlarmOccurrence(
+        TEST_ALARM_ID,
+        Date.now() + TEST_ALARM_DELAY_MS,
+      );
+      const scheduledTime = new Date(schedule.scheduledFor).toLocaleTimeString(
+        'ja-JP',
+        { hour: '2-digit', minute: '2-digit', second: '2-digit' },
+      );
+      setTestAlarmMessage(`テストアラームを ${scheduledTime} に設定しました。`);
+    } catch {
+      setTestAlarmMessage('テストアラームを設定できませんでした。');
+    } finally {
+      setIsSchedulingTestAlarm(false);
+    }
+  }, []);
 
   const renderItem: ListRenderItem<SavedAlarm> = ({ item }) => {
     const isUpdating = updatingAlarmId === item.id;
@@ -226,6 +253,25 @@ export default function AlarmsScreen() {
         <View style={styles.content}>
           {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 
+          <Pressable
+            accessibilityRole="button"
+            disabled={isSchedulingTestAlarm}
+            onPress={() => void handleScheduleTestAlarm()}
+            style={({ pressed }) => [
+              styles.testAlarmButton,
+              pressed && styles.testAlarmButtonPressed,
+            ]}
+          >
+            <Text style={styles.testAlarmButtonText}>
+              {isSchedulingTestAlarm
+                ? '設定中...'
+                : '[DEV] 1分後にテストアラーム'}
+            </Text>
+          </Pressable>
+          {testAlarmMessage && (
+            <Text style={styles.testAlarmMessage}>{testAlarmMessage}</Text>
+          )}
+
           {isLoading ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator color="#171717" />
@@ -297,6 +343,30 @@ const styles = StyleSheet.create({
     color: '#b42318',
     fontSize: 14,
     lineHeight: 21,
+    marginBottom: 10,
+  },
+  testAlarmButton: {
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    borderColor: '#f59e0b',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  testAlarmButtonPressed: {
+    opacity: 0.78,
+  },
+  testAlarmButtonText: {
+    color: '#92400e',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  testAlarmMessage: {
+    color: '#92400e',
+    fontSize: 13,
     marginBottom: 10,
   },
   loadingBox: {
