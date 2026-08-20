@@ -11,7 +11,7 @@
       "package": "com.team5.sleepyface",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/images/app-icon.png"
+        "foregroundImage": "./assets/images/android-adaptive-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": ["android.permission.CAMERA"]
