@@ -4,6 +4,7 @@ import {
   cancelAlarmOccurrence,
   scheduleAlarmOccurrence,
 } from './android-alarm-mechanics';
+import { getLocalDay } from './wake-challenge-attempt';
 
 const SAVED_ALARMS_STORAGE_KEY = 'sleepy-face:saved-alarms';
 
@@ -15,6 +16,7 @@ export type SavedAlarm = {
   minute: number;
   weekdays: Weekday[];
   isEnabled: boolean;
+  lastFiredLocalDay: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -46,6 +48,7 @@ type StoredAlarmRow = {
   minute: unknown;
   weekdays: unknown;
   isEnabled?: unknown;
+  lastFiredLocalDay?: unknown;
   createdAt: unknown;
   updatedAt: unknown;
 };
@@ -175,6 +178,8 @@ function mapStoredAlarm(value: unknown): SavedAlarm {
     hour: row.hour as number,
     id: row.id,
     isEnabled: typeof row.isEnabled === 'boolean' ? row.isEnabled : true,
+    lastFiredLocalDay:
+      typeof row.lastFiredLocalDay === 'string' ? row.lastFiredLocalDay : null,
     minute: row.minute as number,
     updatedAt: row.updatedAt,
     weekdays: normalizeWeekdays(row.weekdays, 'storage_parse_failed'),
@@ -382,6 +387,7 @@ export async function createSavedAlarm(
     hour: validatedInput.hour,
     id: generateSavedAlarmId(),
     isEnabled: true,
+    lastFiredLocalDay: null,
     minute: validatedInput.minute,
     updatedAt: now,
     weekdays: validatedInput.weekdays,
@@ -455,6 +461,59 @@ export async function setSavedAlarmEnabled(
   return updatedAlarm;
 }
 
+// Called by the ringing flow when a Saved Alarm fires, so its already-passed slot for
+// today is skipped rather than re-armed. A no-op for unknown IDs (e.g. the dev test alarm).
+export async function recordSavedAlarmFired(
+  alarmId: string,
+  now: Date = new Date(),
+): Promise<SavedAlarm | null> {
+  const savedAlarms = await readSavedAlarms();
+  const targetAlarm = savedAlarms.find((alarm) => alarm.id === alarmId);
+
+  if (!targetAlarm) {
+    return null;
+  }
+
+  const updatedAlarm: SavedAlarm = {
+    ...targetAlarm,
+    lastFiredLocalDay: getLocalDay(now),
+    updatedAt: now.toISOString(),
+  };
+
+  await syncScheduledAlarm(updatedAlarm);
+  await writeSavedAlarms(
+    savedAlarms.map((alarm) => (alarm.id === alarmId ? updatedAlarm : alarm)),
+  );
+
+  return updatedAlarm;
+}
+
+// DEV-ONLY: lets a developer reset the skip-today state without waiting for the next day.
+export async function clearAlarmFiredToday(id: string): Promise<SavedAlarm> {
+  const savedAlarms = await readSavedAlarms();
+  const targetAlarm = savedAlarms.find((alarm) => alarm.id === id);
+
+  if (!targetAlarm) {
+    throw new AlarmServiceError(
+      'saved_alarm_not_found',
+      'Saved Alarm could not be found.',
+    );
+  }
+
+  const updatedAlarm: SavedAlarm = {
+    ...targetAlarm,
+    lastFiredLocalDay: null,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await syncScheduledAlarm(updatedAlarm);
+  await writeSavedAlarms(
+    savedAlarms.map((alarm) => (alarm.id === id ? updatedAlarm : alarm)),
+  );
+
+  return updatedAlarm;
+}
+
 export async function deleteSavedAlarm(id: string): Promise<void> {
   const savedAlarms = await readSavedAlarms();
   const nextSavedAlarms = savedAlarms.filter((alarm) => alarm.id !== id);
@@ -487,6 +546,7 @@ export function getNextAlarmOccurrence(
   now = new Date(),
 ): Date {
   const currentWeekday = now.getDay();
+  const firedToday = alarm.lastFiredLocalDay === getLocalDay(now);
   let nextOccurrence: Date | null = null;
 
   for (const weekday of alarm.weekdays) {
@@ -495,7 +555,9 @@ export function getNextAlarmOccurrence(
     candidate.setDate(now.getDate() + daysUntilWeekday);
     candidate.setHours(alarm.hour, alarm.minute, 0, 0);
 
-    if (candidate.getTime() <= now.getTime()) {
+    const isTodaysSlot = daysUntilWeekday === 0;
+
+    if (candidate.getTime() <= now.getTime() || (isTodaysSlot && firedToday)) {
       candidate.setDate(candidate.getDate() + 7);
     }
 
@@ -505,4 +567,17 @@ export function getNextAlarmOccurrence(
   }
 
   return nextOccurrence as Date;
+}
+
+// True when this alarm would normally ring again today but already fired today, so its
+// next occurrence has skipped ahead to next week instead.
+export function alarmWillSkipToday(
+  alarm: SavedAlarm,
+  now: Date = new Date(),
+): boolean {
+  return (
+    alarm.isEnabled &&
+    alarm.weekdays.includes(now.getDay() as Weekday) &&
+    alarm.lastFiredLocalDay === getLocalDay(now)
+  );
 }
