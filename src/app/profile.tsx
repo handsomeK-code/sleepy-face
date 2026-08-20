@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -18,7 +18,7 @@ import {
   PROFILE_ICON_LABELS,
   PROFILE_ICON_SOURCES,
 } from '@/constants/profile-icons';
-import { setDevMode } from '@/services/dev-mode';
+import { getDevMode, setDevMode } from '@/services/dev-mode';
 import {
   ProfilePhotosServiceError,
   listMyFailurePhotos,
@@ -72,8 +72,9 @@ function getLoadErrorMessage(error: unknown): string {
   return 'プロフィールを読み込めませんでした。もう一度お試しください。';
 }
 
-const DEV_MODE_TAP_THRESHOLD = 5;
-const DEV_MODE_TAP_RESET_MS = 2000;
+function isDevUserId(userId: string | undefined): boolean {
+  return userId?.toLowerCase().includes('dev') ?? false;
+}
 
 function formatPhotoDate(isoDate: string): string {
   const date = new Date(isoDate);
@@ -93,16 +94,19 @@ export default function ProfileScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState<MyFailurePhoto | null>(
     null,
   );
-  const devModeTapCount = useRef(0);
-  const devModeTapResetTimeout = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const [isDevMode, setIsDevMode] = useState(false);
 
   useEffect(() => {
-    return () => {
-      if (devModeTapResetTimeout.current) {
-        clearTimeout(devModeTapResetTimeout.current);
+    let isActive = true;
+
+    getDevMode().then((devMode) => {
+      if (isActive) {
+        setIsDevMode(devMode);
       }
+    });
+
+    return () => {
+      isActive = false;
     };
   }, []);
 
@@ -169,22 +173,9 @@ export default function ProfileScreen() {
     }
   }, [displayName, iconId]);
 
-  const handleTitlePress = useCallback(() => {
-    if (devModeTapResetTimeout.current) {
-      clearTimeout(devModeTapResetTimeout.current);
-    }
-
-    devModeTapCount.current += 1;
-
-    if (devModeTapCount.current >= DEV_MODE_TAP_THRESHOLD) {
-      devModeTapCount.current = 0;
-      void setDevMode(true);
-      return;
-    }
-
-    devModeTapResetTimeout.current = setTimeout(() => {
-      devModeTapCount.current = 0;
-    }, DEV_MODE_TAP_RESET_MS);
+  const handleEnableDevMode = useCallback(async () => {
+    await setDevMode(true);
+    setIsDevMode(true);
   }, []);
 
   const renderPhotoItem: ListRenderItem<MyFailurePhoto> = ({ item }) => (
@@ -209,9 +200,13 @@ export default function ProfileScreen() {
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Pressable accessibilityRole="button" onPress={handleTitlePress}>
-            <Text style={styles.title}>プロフィール</Text>
-          </Pressable>
+          <Text style={styles.title}>プロフィール</Text>
+
+          {isDevUserId(profile?.userId) && !isDevMode && (
+            <Pressable accessibilityRole="button" onPress={handleEnableDevMode}>
+              <Text style={styles.debugToggleText}>[DEV] 有効化</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.content}>
@@ -366,16 +361,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   header: {
+    alignItems: 'center',
     borderBottomColor: '#f5f5f5',
     borderBottomWidth: 1,
+    flexDirection: 'row',
     height: 61,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 28,
   },
   title: {
     color: '#171717',
     fontSize: 20,
     fontWeight: '800',
+  },
+  debugToggleText: {
+    color: '#b42318',
+    fontSize: 12,
+    fontWeight: '700',
   },
   content: {
     flex: 1,
