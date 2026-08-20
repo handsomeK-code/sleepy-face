@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -18,6 +18,7 @@ import {
   PROFILE_ICON_LABELS,
   PROFILE_ICON_SOURCES,
 } from '@/constants/profile-icons';
+import { setDevMode } from '@/services/dev-mode';
 import {
   ProfilePhotosServiceError,
   listMyFailurePhotos,
@@ -71,6 +72,9 @@ function getLoadErrorMessage(error: unknown): string {
   return 'プロフィールを読み込めませんでした。もう一度お試しください。';
 }
 
+const DEV_MODE_TAP_THRESHOLD = 5;
+const DEV_MODE_TAP_RESET_MS = 2000;
+
 function formatPhotoDate(isoDate: string): string {
   const date = new Date(isoDate);
 
@@ -89,6 +93,18 @@ export default function ProfileScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState<MyFailurePhoto | null>(
     null,
   );
+  const devModeTapCount = useRef(0);
+  const devModeTapResetTimeout = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  useEffect(() => {
+    return () => {
+      if (devModeTapResetTimeout.current) {
+        clearTimeout(devModeTapResetTimeout.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -153,6 +169,24 @@ export default function ProfileScreen() {
     }
   }, [displayName, iconId]);
 
+  const handleTitlePress = useCallback(() => {
+    if (devModeTapResetTimeout.current) {
+      clearTimeout(devModeTapResetTimeout.current);
+    }
+
+    devModeTapCount.current += 1;
+
+    if (devModeTapCount.current >= DEV_MODE_TAP_THRESHOLD) {
+      devModeTapCount.current = 0;
+      void setDevMode(true);
+      return;
+    }
+
+    devModeTapResetTimeout.current = setTimeout(() => {
+      devModeTapCount.current = 0;
+    }, DEV_MODE_TAP_RESET_MS);
+  }, []);
+
   const renderPhotoItem: ListRenderItem<MyFailurePhoto> = ({ item }) => (
     <Pressable
       accessibilityRole="button"
@@ -175,7 +209,9 @@ export default function ProfileScreen() {
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Text style={styles.title}>プロフィール</Text>
+          <Pressable accessibilityRole="button" onPress={handleTitlePress}>
+            <Text style={styles.title}>プロフィール</Text>
+          </Pressable>
         </View>
 
         <View style={styles.content}>

@@ -7,6 +7,7 @@ import {
   formatRemainingTime,
 } from '@/components/wake-challenge-ui';
 import { resumeTimer, useAlarmTimer } from '@/services/alarm-timer';
+import { getDevMode } from '@/services/dev-mode';
 import {
   QuizServiceError,
   startQuiz,
@@ -67,10 +68,25 @@ export default function QuizScreen() {
   const [answerText, setAnswerText] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDevMode, setIsDevMode] = useState(false);
   const didHandleExpiry = useRef(false);
 
   useEffect(() => {
     resumeTimer();
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    getDevMode().then((devMode) => {
+      if (isActive) {
+        setIsDevMode(devMode);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const routeToFailure = useCallback((reason: WakeChallengeFailureReason) => {
@@ -167,6 +183,24 @@ export default function QuizScreen() {
               {quizState.lastAnswerCorrect ? '正解!' : '不正解'}
             </Text>
           )}
+
+          {isDevMode && (
+            <View style={styles.debugButtonRow}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.replace('/quiz-success')}
+              >
+                <Text style={styles.debugToggleText}>[DEV] 成功</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => routeToFailure('bad-photo-limit')}
+              >
+                <Text style={styles.debugToggleText}>[DEV] 失敗</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
 
         <View style={styles.content}>
@@ -222,6 +256,16 @@ export default function QuizScreen() {
 }
 
 const styles = StyleSheet.create({
+  debugButtonRow: {
+    flexDirection: 'row',
+    gap: 14,
+    marginTop: 10,
+  },
+  debugToggleText: {
+    color: '#b42318',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   answerBox: {
     marginTop: 24,
     width: '70%',
