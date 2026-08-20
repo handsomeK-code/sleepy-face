@@ -18,8 +18,8 @@ AppRegistry.registerHeadlessTask(
   () => () => resyncAllScheduledAlarms(),
 );
 
-const DEV_INDEX_ROUTE = '/';
 const DEV_TEST_ROUTES = new Set([
+  '/dev-menu',
   '/alarm-ring-test',
   '/ringing',
   '/timer-test',
@@ -38,12 +38,12 @@ function isInitialSetupRoute(pathname: string): boolean {
   return pathname === '/profile-setup';
 }
 
+function isIndexRoute(pathname: string): boolean {
+  return pathname === '/';
+}
+
 function shouldSkipProfileGate(pathname: string): boolean {
-  return (
-    pathname === DEV_INDEX_ROUTE ||
-    pathname === OAUTH_CALLBACK_ROUTE ||
-    DEV_TEST_ROUTES.has(pathname)
-  );
+  return pathname === OAUTH_CALLBACK_ROUTE || DEV_TEST_ROUTES.has(pathname);
 }
 
 let hasCheckedAbandonedWakeChallengeAttempt = false;
@@ -121,7 +121,11 @@ export default function RootLayout() {
         return;
       }
 
-      if (isAuthRoute(pathname) || isInitialSetupRoute(pathname)) {
+      if (
+        isAuthRoute(pathname) ||
+        isInitialSetupRoute(pathname) ||
+        isIndexRoute(pathname)
+      ) {
         // Home is typically the first screen mounted this session; replacing to it
         // synchronously here can catch Expo Router's native Stack mid-commit and briefly
         // render the built-in "Unmatched Route" screen before it settles (a known upstream
