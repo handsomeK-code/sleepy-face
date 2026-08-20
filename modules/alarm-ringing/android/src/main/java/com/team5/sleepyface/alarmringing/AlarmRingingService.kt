@@ -110,16 +110,32 @@ class AlarmRingingService : Service() {
   }
 
   private fun resolveAlarmToneUri(): Uri? {
-    return safeGetDefaultUri(RingtoneManager.TYPE_ALARM)
-      ?: safeGetDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+    // Deliberately avoid RingtoneManager.getDefaultUri()/getActualDefaultRingtoneUri():
+    // on some OEM builds (observed on Samsung One UI) resolving "the default" tone lazily
+    // writes a Settings.System init value the first time it's touched, which throws
+    // SecurityException without WRITE_SETTINGS (an app should never need that permission
+    // just to read a tone) -- and it's non-deterministic, since MediaPlayer.setDataSource()
+    // triggers the same resolution internally even when getDefaultUri() itself didn't throw.
+    // Querying the ringtone database directly for an already-resolved URI sidesteps that
+    // "default" resolution path entirely.
+    return safeGetFirstRingtoneUri(RingtoneManager.TYPE_ALARM)
+      ?: safeGetFirstRingtoneUri(RingtoneManager.TYPE_NOTIFICATION)
       ?: safeGetValidRingtoneUri()
   }
 
-  private fun safeGetDefaultUri(type: Int): Uri? {
+  private fun safeGetFirstRingtoneUri(type: Int): Uri? {
     return try {
-      RingtoneManager.getDefaultUri(type)
+      val manager = RingtoneManager(applicationContext)
+      manager.setType(type)
+      val cursor = manager.cursor
+
+      if (!cursor.moveToFirst()) {
+        return null
+      }
+
+      manager.getRingtoneUri(cursor.position)
     } catch (error: Exception) {
-      Log.e(LOG_TAG, "getDefaultUri($type) failed", error)
+      Log.e(LOG_TAG, "Querying ringtones for type $type failed", error)
       null
     }
   }
