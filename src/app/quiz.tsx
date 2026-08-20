@@ -30,14 +30,14 @@ const KEYPAD_KEYS: QuizKeypadKey[] = [
   '7',
   '8',
   '9',
-  'clear',
+  'minus',
   '0',
   'backspace',
 ];
 
 function getKeypadKeyLabel(key: QuizKeypadKey): string {
-  if (key === 'clear') {
-    return 'C';
+  if (key === 'minus') {
+    return '-';
   }
 
   if (key === 'backspace') {

@@ -16,6 +16,18 @@ describe('applyQuizKeypadInput', () => {
     expect(applyQuizKeypadInput('', 'clear')).toBe('');
   });
 
+  it('prepends a minus sign to empty text', () => {
+    expect(applyQuizKeypadInput('', 'minus')).toBe('-');
+  });
+
+  it('prepends a minus sign to positive text', () => {
+    expect(applyQuizKeypadInput('12', 'minus')).toBe('-12');
+  });
+
+  it('removes the minus sign when toggled again', () => {
+    expect(applyQuizKeypadInput('-12', 'minus')).toBe('12');
+  });
+
   it('removes the last character on backspace', () => {
     expect(applyQuizKeypadInput('123', 'backspace')).toBe('12');
     expect(applyQuizKeypadInput('1', 'backspace')).toBe('');
