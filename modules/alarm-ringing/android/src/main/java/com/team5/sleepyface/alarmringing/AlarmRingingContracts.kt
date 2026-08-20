@@ -2,6 +2,8 @@ package com.team5.sleepyface.alarmringing
 
 internal const val ACTION_FIRE_TEST_ALARM =
   "com.team5.sleepyface.alarmringing.action.FIRE_TEST_ALARM"
+internal const val ACTION_FIRE_SAVED_ALARM =
+  "com.team5.sleepyface.alarmringing.action.FIRE_SAVED_ALARM"
 internal const val ACTION_STOP_RINGING =
   "com.team5.sleepyface.alarmringing.action.STOP_RINGING"
 

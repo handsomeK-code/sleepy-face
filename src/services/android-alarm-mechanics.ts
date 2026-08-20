@@ -21,12 +21,17 @@ export type RingingAlarmState = {
 };
 
 type NativeAndroidAlarmMechanicsModule = {
-  canScheduleExactAlarms(): Promise<boolean>;
+  cancelSavedAlarmOccurrence(alarmId: string): Promise<void>;
   cancelScheduledTestAlarm(): Promise<void>;
+  canScheduleExactAlarms(): Promise<boolean>;
   getNotificationPermissionStatus(): Promise<NotificationPermissionStatus>;
   getRingingAlarmState(): Promise<RingingAlarmState | null>;
   openExactAlarmSettings(): Promise<void>;
   requestNotificationPermission(): Promise<NotificationPermissionStatus>;
+  scheduleSavedAlarmOccurrence(
+    alarmId: string,
+    triggerAtMillis: number,
+  ): Promise<RingingAlarmSchedule>;
   scheduleTestAlarmAfterSeconds(seconds: number): Promise<RingingAlarmSchedule>;
   stopRingingAlarm(): Promise<void>;
 };
@@ -137,6 +142,19 @@ export function cancelScheduledTestAlarm(): Promise<void> {
 
 export function getRingingAlarmState(): Promise<RingingAlarmState | null> {
   return callNative((module) => module.getRingingAlarmState());
+}
+
+export function scheduleAlarmOccurrence(
+  alarmId: string,
+  triggerAtMillis: number,
+): Promise<RingingAlarmSchedule> {
+  return callNative((module) =>
+    module.scheduleSavedAlarmOccurrence(alarmId, triggerAtMillis),
+  );
+}
+
+export function cancelAlarmOccurrence(alarmId: string): Promise<void> {
+  return callNative((module) => module.cancelSavedAlarmOccurrence(alarmId));
 }
 
 export function stopRingingAlarm(): Promise<void> {

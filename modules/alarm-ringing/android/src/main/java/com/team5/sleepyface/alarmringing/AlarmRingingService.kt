@@ -29,7 +29,7 @@ class AlarmRingingService : Service() {
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     when (intent?.action) {
-      ACTION_FIRE_TEST_ALARM -> {
+      ACTION_FIRE_TEST_ALARM, ACTION_FIRE_SAVED_ALARM -> {
         val alarmId = intent.getStringExtra(EXTRA_ALARM_ID) ?: return START_NOT_STICKY
         startRinging(alarmId)
       }
@@ -104,7 +104,7 @@ class AlarmRingingService : Service() {
     NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
       .setSmallIcon(applicationInfo.icon)
       .setContentTitle("Alarm ringing")
-      .setContentText("Test alarm is ringing.")
+      .setContentText("Alarm is ringing.")
       .setCategory(NotificationCompat.CATEGORY_ALARM)
       .setPriority(NotificationCompat.PRIORITY_MAX)
       .setOngoing(true)
