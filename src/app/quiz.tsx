@@ -195,7 +195,14 @@ export default function QuizScreen() {
 
               <Pressable
                 accessibilityRole="button"
-                onPress={() => routeToFailure('bad-photo-limit')}
+                onPress={() => {
+                  if (params.localPhotoUri) {
+                    routeToPhotoFailure(params.localPhotoUri);
+                    return;
+                  }
+
+                  routeToFailure('bad-photo-limit');
+                }}
               >
                 <Text style={styles.debugToggleText}>[DEV] 失敗</Text>
               </Pressable>
