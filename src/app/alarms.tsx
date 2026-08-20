@@ -88,6 +88,7 @@ function getPermissionDeniedMessage(
 export default function AlarmsScreen() {
   const [alarms, setAlarms] = useState<SavedAlarm[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [updatingAlarmId, setUpdatingAlarmId] = useState<string | null>(null);
@@ -190,6 +191,7 @@ export default function AlarmsScreen() {
 
   const handleFireTestAlarm = useCallback(async () => {
     setErrorMessage(null);
+    setSuccessMessage(null);
 
     try {
       const permissionResult = await ensureAlarmPermissions();
@@ -200,6 +202,7 @@ export default function AlarmsScreen() {
       }
 
       await scheduleTestAlarm();
+      setSuccessMessage('20秒後にテストアラームが鳴ります。');
     } catch (error) {
       if (error instanceof AndroidAlarmMechanicsError) {
         setErrorMessage('テストアラームを登録できませんでした。');
@@ -298,6 +301,9 @@ export default function AlarmsScreen() {
 
         <View style={styles.content}>
           {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+          {successMessage && (
+            <Text style={styles.successText}>{successMessage}</Text>
+          )}
 
           {isLoading ? (
             <View style={styles.loadingBox}>
@@ -375,6 +381,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#b42318',
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 10,
+  },
+  successText: {
+    color: '#067647',
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 10,
