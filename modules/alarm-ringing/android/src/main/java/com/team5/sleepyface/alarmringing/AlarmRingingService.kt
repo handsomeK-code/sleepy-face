@@ -72,21 +72,52 @@ class AlarmRingingService : Service() {
   private fun playDefaultAlarmTone() {
     stopDefaultAlarmTone()
 
-    val alarmToneUri: Uri =
-      RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-        ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+    // On some OEM builds (observed on Samsung One UI), RingtoneManager.getDefaultUri()
+    // internally triggers a lazy write to Settings.System the first time it resolves the
+    // default alarm/notification tone, which throws SecurityException without
+    // WRITE_SETTINGS (an app should never need to hold that permission just to read a
+    // default tone). Guard every step so a tone-resolution/playback failure silences the
+    // alarm sound instead of crashing the whole ringing service.
+    val alarmToneUri = resolveAlarmToneUri() ?: return
+    val player = MediaPlayer()
 
-    mediaPlayer = MediaPlayer().apply {
-      setAudioAttributes(
+    try {
+      player.setAudioAttributes(
         AudioAttributes.Builder()
           .setUsage(AudioAttributes.USAGE_ALARM)
           .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
           .build(),
       )
-      setDataSource(applicationContext, alarmToneUri)
-      isLooping = true
-      prepare()
-      start()
+      player.setDataSource(applicationContext, alarmToneUri)
+      player.isLooping = true
+      player.prepare()
+      player.start()
+      mediaPlayer = player
+    } catch (error: Exception) {
+      player.release()
+      mediaPlayer = null
+    }
+  }
+
+  private fun resolveAlarmToneUri(): Uri? {
+    return safeGetDefaultUri(RingtoneManager.TYPE_ALARM)
+      ?: safeGetDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+      ?: safeGetValidRingtoneUri()
+  }
+
+  private fun safeGetDefaultUri(type: Int): Uri? {
+    return try {
+      RingtoneManager.getDefaultUri(type)
+    } catch (error: Exception) {
+      null
+    }
+  }
+
+  private fun safeGetValidRingtoneUri(): Uri? {
+    return try {
+      RingtoneManager.getValidRingtoneUri(applicationContext)
+    } catch (error: Exception) {
+      null
     }
   }
 
