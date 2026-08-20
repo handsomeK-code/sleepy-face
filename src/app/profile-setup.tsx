@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  InteractionManager,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -27,6 +28,17 @@ import {
   type InitialSetupValidationErrorCode,
   type ProfileIconId,
 } from '@/services/user';
+
+// Home is typically the first screen navigated to in a session, and replacing to it
+// synchronously right after an async operation resolves can catch Expo Router's native
+// Stack mid-commit, briefly rendering the built-in "Unmatched Route" screen before it
+// settles (a known upstream timing issue: https://github.com/expo/expo/issues/47687).
+// Deferring until after the current interaction/commit settles avoids the flash.
+function replaceToHome(): void {
+  InteractionManager.runAfterInteractions(() => {
+    router.replace('/home');
+  });
+}
 
 function getValidationMessage(code: InitialSetupValidationErrorCode): string {
   switch (code) {
@@ -86,7 +98,7 @@ export default function ProfileSetupScreen() {
       }
 
       if (profile) {
-        router.replace('/home');
+        replaceToHome();
         return;
       }
 
@@ -130,7 +142,7 @@ export default function ProfileSetupScreen() {
 
     try {
       await createProfile({ ...validationResult.value, iconId });
-      router.replace('/home');
+      replaceToHome();
     } catch (error) {
       if (
         error instanceof UserServiceError &&
@@ -147,7 +159,7 @@ export default function ProfileSetupScreen() {
         const profile = await getMyProfile();
 
         if (profile) {
-          router.replace('/home');
+          replaceToHome();
           return;
         }
       }
