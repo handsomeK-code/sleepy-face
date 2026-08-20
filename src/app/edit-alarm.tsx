@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
   deleteSavedAlarm,
@@ -55,9 +56,23 @@ function getAlarmErrorMessage(error: unknown): string {
     if (error.code === 'saved_alarm_not_found') {
       return 'アラームが見つかりませんでした。';
     }
+
+    if (error.code === 'alarm_scheduling_failed') {
+      return 'アラームを端末に登録できませんでした。';
+    }
   }
 
   return 'アラームを更新できませんでした。';
+}
+
+function getPermissionDeniedMessage(
+  reason: 'exact_alarm_unavailable' | 'notification_permission_denied',
+): string {
+  if (reason === 'notification_permission_denied') {
+    return '通知の権限が必要です。許可してからもう一度お試しください。';
+  }
+
+  return '「アラームとリマインダー」の権限を許可してから、もう一度お試しください。';
 }
 
 function TimeWheel({
@@ -269,6 +284,13 @@ export default function EditAlarmScreen() {
     setIsSaving(true);
 
     try {
+      const permissionResult = await ensureAlarmPermissions();
+
+      if (!permissionResult.granted) {
+        setErrorMessage(getPermissionDeniedMessage(permissionResult.reason));
+        return;
+      }
+
       await updateSavedAlarm(alarmId, {
         hour,
         minute,

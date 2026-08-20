@@ -221,4 +221,63 @@ describe('Android Alarm Mechanics service', () => {
       'saved-alarm-1',
     );
   });
+
+  it('reports permissions already granted without prompting', async () => {
+    const androidAlarmMechanics = await import('../android-alarm-mechanics');
+
+    nativeModule.getNotificationPermissionStatus.mockResolvedValue('granted');
+    nativeModule.canScheduleExactAlarms.mockResolvedValue(true);
+
+    await expect(
+      androidAlarmMechanics.ensureAlarmPermissions(),
+    ).resolves.toEqual({ granted: true });
+    expect(nativeModule.requestNotificationPermission).not.toHaveBeenCalled();
+    expect(nativeModule.openExactAlarmSettings).not.toHaveBeenCalled();
+  });
+
+  it('requests notification permission when missing, then checks exact alarm access', async () => {
+    const androidAlarmMechanics = await import('../android-alarm-mechanics');
+
+    nativeModule.getNotificationPermissionStatus.mockResolvedValue(
+      'undetermined',
+    );
+    nativeModule.requestNotificationPermission.mockResolvedValue('granted');
+    nativeModule.canScheduleExactAlarms.mockResolvedValue(true);
+
+    await expect(
+      androidAlarmMechanics.ensureAlarmPermissions(),
+    ).resolves.toEqual({ granted: true });
+    expect(nativeModule.requestNotificationPermission).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports notification_permission_denied and skips the exact-alarm check when denied', async () => {
+    const androidAlarmMechanics = await import('../android-alarm-mechanics');
+
+    nativeModule.getNotificationPermissionStatus.mockResolvedValue('denied');
+    nativeModule.requestNotificationPermission.mockResolvedValue('denied');
+
+    await expect(
+      androidAlarmMechanics.ensureAlarmPermissions(),
+    ).resolves.toEqual({
+      granted: false,
+      reason: 'notification_permission_denied',
+    });
+    expect(nativeModule.canScheduleExactAlarms).not.toHaveBeenCalled();
+  });
+
+  it('opens exact alarm settings and reports exact_alarm_unavailable when unavailable', async () => {
+    const androidAlarmMechanics = await import('../android-alarm-mechanics');
+
+    nativeModule.getNotificationPermissionStatus.mockResolvedValue('granted');
+    nativeModule.canScheduleExactAlarms.mockResolvedValue(false);
+    nativeModule.openExactAlarmSettings.mockResolvedValue(undefined);
+
+    await expect(
+      androidAlarmMechanics.ensureAlarmPermissions(),
+    ).resolves.toEqual({
+      granted: false,
+      reason: 'exact_alarm_unavailable',
+    });
+    expect(nativeModule.openExactAlarmSettings).toHaveBeenCalledTimes(1);
+  });
 });

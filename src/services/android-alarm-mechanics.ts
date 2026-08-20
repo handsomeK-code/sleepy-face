@@ -160,3 +160,29 @@ export function cancelAlarmOccurrence(alarmId: string): Promise<void> {
 export function stopRingingAlarm(): Promise<void> {
   return callNative((module) => module.stopRingingAlarm());
 }
+
+export type EnsureAlarmPermissionsResult =
+  | { granted: true }
+  | {
+      granted: false;
+      reason: 'exact_alarm_unavailable' | 'notification_permission_denied';
+    };
+
+export async function ensureAlarmPermissions(): Promise<EnsureAlarmPermissionsResult> {
+  const notificationStatus = await getNotificationPermissionStatus();
+
+  if (notificationStatus !== 'granted') {
+    const nextNotificationStatus = await requestNotificationPermission();
+
+    if (nextNotificationStatus !== 'granted') {
+      return { granted: false, reason: 'notification_permission_denied' };
+    }
+  }
+
+  if (!(await canScheduleExactAlarms())) {
+    await openExactAlarmSettings();
+    return { granted: false, reason: 'exact_alarm_unavailable' };
+  }
+
+  return { granted: true };
+}

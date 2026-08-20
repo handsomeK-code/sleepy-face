@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
+import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
   listSavedAlarms,
@@ -61,10 +62,22 @@ function getAlarmErrorMessage(error: unknown): string {
       case 'storage_clear_failed':
       case 'weekday_already_used':
         return 'アラーム情報を更新できませんでした。';
+      case 'alarm_scheduling_failed':
+        return 'アラームを端末に登録できませんでした。';
     }
   }
 
   return 'アラーム情報を更新できませんでした。';
+}
+
+function getPermissionDeniedMessage(
+  reason: 'exact_alarm_unavailable' | 'notification_permission_denied',
+): string {
+  if (reason === 'notification_permission_denied') {
+    return '通知の権限が必要です。許可してからもう一度お試しください。';
+  }
+
+  return '「アラームとリマインダー」の権限を許可してから、もう一度お試しください。';
 }
 
 export default function AlarmsScreen() {
@@ -127,6 +140,18 @@ export default function AlarmsScreen() {
       );
 
       try {
+        if (isEnabled) {
+          const permissionResult = await ensureAlarmPermissions();
+
+          if (!permissionResult.granted) {
+            setAlarms(previousAlarms);
+            setErrorMessage(
+              getPermissionDeniedMessage(permissionResult.reason),
+            );
+            return;
+          }
+        }
+
         const updatedAlarm = await setSavedAlarmEnabled(alarm.id, isEnabled);
         setAlarms((currentAlarms) =>
           currentAlarms.map((currentAlarm) =>
