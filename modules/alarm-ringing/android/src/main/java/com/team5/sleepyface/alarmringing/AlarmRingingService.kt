@@ -14,8 +14,11 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import java.time.Instant
+
+private const val LOG_TAG = "AlarmRingingService"
 
 class AlarmRingingService : Service() {
   private val handler = Handler(Looper.getMainLooper())
@@ -78,7 +81,13 @@ class AlarmRingingService : Service() {
     // WRITE_SETTINGS (an app should never need to hold that permission just to read a
     // default tone). Guard every step so a tone-resolution/playback failure silences the
     // alarm sound instead of crashing the whole ringing service.
-    val alarmToneUri = resolveAlarmToneUri() ?: return
+    val alarmToneUri = resolveAlarmToneUri()
+
+    if (alarmToneUri == null) {
+      Log.e(LOG_TAG, "No alarm tone URI could be resolved; ringing silently.")
+      return
+    }
+
     val player = MediaPlayer()
 
     try {
@@ -94,6 +103,7 @@ class AlarmRingingService : Service() {
       player.start()
       mediaPlayer = player
     } catch (error: Exception) {
+      Log.e(LOG_TAG, "Failed to play alarm tone $alarmToneUri; ringing silently.", error)
       player.release()
       mediaPlayer = null
     }
@@ -109,6 +119,7 @@ class AlarmRingingService : Service() {
     return try {
       RingtoneManager.getDefaultUri(type)
     } catch (error: Exception) {
+      Log.e(LOG_TAG, "getDefaultUri($type) failed", error)
       null
     }
   }
@@ -117,6 +128,7 @@ class AlarmRingingService : Service() {
     return try {
       RingtoneManager.getValidRingtoneUri(applicationContext)
     } catch (error: Exception) {
+      Log.e(LOG_TAG, "getValidRingtoneUri() failed", error)
       null
     }
   }

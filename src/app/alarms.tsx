@@ -28,8 +28,8 @@ import {
   type Weekday,
 } from '@/services/alarm';
 
-const TEST_ALARM_ID = 'dev-test-alarm-1-minute';
-const TEST_ALARM_DELAY_MS = 60_000;
+const TEST_ALARM_ID = 'dev-test-alarm-20-seconds';
+const TEST_ALARM_DELAY_MS = 20_000;
 
 const WEEKDAY_LABELS: Record<Weekday, string> = {
   0: '日',
@@ -299,7 +299,7 @@ export default function AlarmsScreen() {
             <Text style={styles.testAlarmButtonText}>
               {isSchedulingTestAlarm
                 ? '設定中...'
-                : '[DEV] 1分後にテストアラーム'}
+                : '[DEV] 20秒後にテストアラーム'}
             </Text>
           </Pressable>
           {testAlarmMessage && (
