@@ -18,6 +18,7 @@ import {
   PROFILE_ICON_LABELS,
   PROFILE_ICON_SOURCES,
 } from '@/constants/profile-icons';
+import { getDevMode, setDevMode } from '@/services/dev-mode';
 import {
   ProfilePhotosServiceError,
   listMyFailurePhotos,
@@ -71,6 +72,10 @@ function getLoadErrorMessage(error: unknown): string {
   return 'プロフィールを読み込めませんでした。もう一度お試しください。';
 }
 
+function isDevUserId(userId: string | undefined): boolean {
+  return userId?.toLowerCase().includes('dev') ?? false;
+}
+
 function formatPhotoDate(isoDate: string): string {
   const date = new Date(isoDate);
 
@@ -89,6 +94,21 @@ export default function ProfileScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState<MyFailurePhoto | null>(
     null,
   );
+  const [isDevMode, setIsDevMode] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    getDevMode().then((devMode) => {
+      if (isActive) {
+        setIsDevMode(devMode);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -153,6 +173,11 @@ export default function ProfileScreen() {
     }
   }, [displayName, iconId]);
 
+  const handleEnableDevMode = useCallback(async () => {
+    await setDevMode(true);
+    setIsDevMode(true);
+  }, []);
+
   const renderPhotoItem: ListRenderItem<MyFailurePhoto> = ({ item }) => (
     <Pressable
       accessibilityRole="button"
@@ -176,6 +201,12 @@ export default function ProfileScreen() {
       <View style={styles.screen}>
         <View style={styles.header}>
           <Text style={styles.title}>プロフィール</Text>
+
+          {isDevUserId(profile?.userId) && !isDevMode && (
+            <Pressable accessibilityRole="button" onPress={handleEnableDevMode}>
+              <Text style={styles.debugToggleText}>[DEV] 有効化</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.content}>
@@ -330,16 +361,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   header: {
+    alignItems: 'center',
     borderBottomColor: '#f5f5f5',
     borderBottomWidth: 1,
+    flexDirection: 'row',
     height: 61,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 28,
   },
   title: {
     color: '#171717',
     fontSize: 20,
     fontWeight: '800',
+  },
+  debugToggleText: {
+    color: '#b42318',
+    fontSize: 12,
+    fontWeight: '700',
   },
   content: {
     flex: 1,

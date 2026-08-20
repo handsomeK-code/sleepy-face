@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
 import { PROFILE_ICON_SOURCES } from '@/constants/profile-icons';
+import { getDevMode, setDevMode } from '@/services/dev-mode';
 import {
   clearFriendsFeedAccessBlock,
   getFriendsFeedAccessState,
@@ -25,10 +26,6 @@ import {
   listFriendsFeed,
   type FriendsFeedItem,
 } from '@/services/home-feed';
-import type { ProfileIconId } from '@/services/user';
-
-// Flip to true locally to use the dev-only debug tools below. Always false in committed code.
-const SHOW_DEBUG_TOOLS = false;
 
 function getHomeFeedErrorMessage(error: unknown): string {
   if (error instanceof HomeFeedServiceError) {
@@ -69,6 +66,21 @@ export default function HomeScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDevMode, setIsDevMode] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    getDevMode().then((devMode) => {
+      if (isActive) {
+        setIsDevMode(devMode);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -112,7 +124,12 @@ export default function HomeScreen() {
     }
   }, []);
 
-  // DEV-ONLY: lets us preview the blocked-state UI without a real Challenge Failure. Remove before ship.
+  const handleExitDevMode = useCallback(async () => {
+    await setDevMode(false);
+    setIsDevMode(false);
+  }, []);
+
+  // DEV-ONLY: lets us preview the blocked-state UI without a real Challenge Failure.
   const handleToggleDebugBlock = useCallback(async () => {
     if (accessState === 'blocked') {
       await clearFriendsFeedAccessBlock();
@@ -122,25 +139,6 @@ export default function HomeScreen() {
 
     await handleRefresh();
   }, [accessState, handleRefresh]);
-
-  // DEV-ONLY: injects a fake feed card (no Supabase write) so the feed layout can be previewed with content. Remove before ship.
-  const handleAddMockFeedItem = useCallback(() => {
-    const mockIconIds: ProfileIconId[] = ['woman', 'man', 'boy', 'grandmother'];
-    const mockIconId =
-      mockIconIds[Math.floor(Math.random() * mockIconIds.length)];
-
-    setFeed((currentFeed) => [
-      {
-        createdAt: new Date().toISOString(),
-        displayName: 'テストユーザー',
-        iconId: mockIconId,
-        imageUrl: `https://placehold.co/600x600/e5e5e5/171717?text=MOCK+${Date.now()}`,
-        photoId: `mock-${Date.now()}`,
-        profileId: 'mock-profile',
-      },
-      ...currentFeed,
-    ]);
-  }, []);
 
   const renderItem: ListRenderItem<FriendsFeedItem> = ({ item }) => (
     <View>
@@ -173,23 +171,19 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>ホーム</Text>
 
-          {/* DEV-ONLY: no design, just to preview the feed/blocked-state UI. Flip SHOW_DEBUG_TOOLS to true locally to use it. */}
-          {SHOW_DEBUG_TOOLS && (
+          {isDevMode && (
             <View style={styles.debugButtonRow}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={handleAddMockFeedItem}
-              >
-                <Text style={styles.debugToggleText}>[DEBUG] +写真</Text>
-              </Pressable>
-
               <Pressable
                 accessibilityRole="button"
                 onPress={handleToggleDebugBlock}
               >
                 <Text style={styles.debugToggleText}>
-                  [DEBUG] {accessState === 'blocked' ? '解除' : 'ブロック'}
+                  [DEV] {accessState === 'blocked' ? '解除' : 'ブロック'}
                 </Text>
+              </Pressable>
+
+              <Pressable accessibilityRole="button" onPress={handleExitDevMode}>
+                <Text style={styles.debugToggleText}>[DEV] 終了</Text>
               </Pressable>
             </View>
           )}

@@ -12,7 +12,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
-import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
+import {
+  AndroidAlarmMechanicsError,
+  ensureAlarmPermissions,
+  scheduleTestAlarm,
+} from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
   listSavedAlarms,
@@ -20,6 +24,7 @@ import {
   type SavedAlarm,
   type Weekday,
 } from '@/services/alarm';
+import { getDevMode } from '@/services/dev-mode';
 
 const WEEKDAY_LABELS: Record<Weekday, string> = {
   0: '日',
@@ -83,9 +88,25 @@ function getPermissionDeniedMessage(
 export default function AlarmsScreen() {
   const [alarms, setAlarms] = useState<SavedAlarm[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [updatingAlarmId, setUpdatingAlarmId] = useState<string | null>(null);
+  const [isDevMode, setIsDevMode] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    getDevMode().then((devMode) => {
+      if (isActive) {
+        setIsDevMode(devMode);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const loadAlarms = useCallback(async () => {
     setErrorMessage(null);
@@ -168,6 +189,30 @@ export default function AlarmsScreen() {
     [alarms],
   );
 
+  const handleFireTestAlarm = useCallback(async () => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const permissionResult = await ensureAlarmPermissions();
+
+      if (!permissionResult.granted) {
+        setErrorMessage(getPermissionDeniedMessage(permissionResult.reason));
+        return;
+      }
+
+      await scheduleTestAlarm();
+      setSuccessMessage('20秒後にテストアラームが鳴ります。');
+    } catch (error) {
+      if (error instanceof AndroidAlarmMechanicsError) {
+        setErrorMessage('テストアラームを登録できませんでした。');
+        return;
+      }
+
+      setErrorMessage(getAlarmErrorMessage(error));
+    }
+  }, []);
+
   const renderItem: ListRenderItem<SavedAlarm> = ({ item }) => {
     const isUpdating = updatingAlarmId === item.id;
 
@@ -246,10 +291,19 @@ export default function AlarmsScreen() {
       <View style={styles.screen}>
         <View style={styles.header}>
           <Text style={styles.title}>アラーム</Text>
+
+          {isDevMode && (
+            <Pressable accessibilityRole="button" onPress={handleFireTestAlarm}>
+              <Text style={styles.debugToggleText}>[DEV] 20秒後に鳴らす</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.content}>
           {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+          {successMessage && (
+            <Text style={styles.successText}>{successMessage}</Text>
+          )}
 
           {isLoading ? (
             <View style={styles.loadingBox}>
@@ -302,16 +356,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   header: {
+    alignItems: 'center',
     borderBottomColor: '#f5f5f5',
     borderBottomWidth: 1,
+    flexDirection: 'row',
     height: 61,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 28,
   },
   title: {
     color: '#171717',
     fontSize: 20,
     fontWeight: '800',
+  },
+  debugToggleText: {
+    color: '#b42318',
+    fontSize: 12,
+    fontWeight: '700',
   },
   content: {
     flex: 1,
@@ -320,6 +381,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#b42318',
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 10,
+  },
+  successText: {
+    color: '#067647',
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 10,
