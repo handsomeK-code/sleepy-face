@@ -21,7 +21,10 @@ export default function TimerTestScreen() {
         <Button onPress={() => startTimer(10)} title="start 10s" />
         <Button onPress={pauseTimer} title="pause" />
         <Button onPress={resumeTimer} title="resume" />
-        <Button onPress={() => router.navigate('/')} title="画面一覧に戻る" />
+        <Button
+          onPress={() => router.navigate('/dev-menu')}
+          title="画面一覧に戻る"
+        />
       </View>
     </SafeAreaView>
   );
