@@ -1,6 +1,6 @@
 import { Stack, router, usePathname } from 'expo-router';
 import { useEffect } from 'react';
-import { AppRegistry } from 'react-native';
+import { AppRegistry, InteractionManager } from 'react-native';
 
 import { resyncAllScheduledAlarms } from '@/services/alarm';
 import { getCurrentUserId } from '@/services/auth';
@@ -114,7 +114,16 @@ export default function RootLayout() {
       }
 
       if (isAuthRoute(pathname) || isInitialSetupRoute(pathname)) {
-        router.replace('/home');
+        // Home is typically the first screen mounted this session; replacing to it
+        // synchronously here can catch Expo Router's native Stack mid-commit and briefly
+        // render the built-in "Unmatched Route" screen before it settles (a known upstream
+        // timing issue: https://github.com/expo/expo/issues/47687). Defer until after the
+        // current interaction/commit settles to avoid the flash.
+        InteractionManager.runAfterInteractions(() => {
+          if (isActive) {
+            router.replace('/home');
+          }
+        });
       }
     }
 
