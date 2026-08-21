@@ -7,6 +7,10 @@ import {
 import { getLocalDay } from './wake-challenge-attempt';
 
 const SAVED_ALARMS_STORAGE_KEY = 'sleepy-face:saved-alarms';
+// Tracks the local day of the user's last Daily Alarm Attempt independent of any single
+// alarm's id, so deleting and recreating the alarm that fired can't re-open today's attempt.
+const LAST_ALARM_ATTEMPT_LOCAL_DAY_STORAGE_KEY =
+  'sleepy-face:last-alarm-attempt-local-day';
 
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -243,6 +247,33 @@ async function writeSavedAlarms(savedAlarms: SavedAlarm[]): Promise<void> {
   }
 }
 
+async function readLastAlarmAttemptLocalDay(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(LAST_ALARM_ATTEMPT_LOCAL_DAY_STORAGE_KEY);
+  } catch (error) {
+    throw new AlarmServiceError(
+      'storage_read_failed',
+      'Could not read the last alarm attempt local day from local storage.',
+      error,
+    );
+  }
+}
+
+async function writeLastAlarmAttemptLocalDay(localDay: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(
+      LAST_ALARM_ATTEMPT_LOCAL_DAY_STORAGE_KEY,
+      localDay,
+    );
+  } catch (error) {
+    throw new AlarmServiceError(
+      'storage_write_failed',
+      'Could not write the last alarm attempt local day to local storage.',
+      error,
+    );
+  }
+}
+
 function generateSavedAlarmId(): string {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
     return globalThis.crypto.randomUUID();
@@ -381,13 +412,18 @@ export async function createSavedAlarm(
 
   assertNoWeekdayConflicts(savedAlarms, validatedInput.weekdays);
 
-  const now = new Date().toISOString();
+  const nowDate = new Date();
+  const now = nowDate.toISOString();
+  const lastAlarmAttemptLocalDay = await readLastAlarmAttemptLocalDay();
   const savedAlarm: SavedAlarm = {
     createdAt: now,
     hour: validatedInput.hour,
     id: generateSavedAlarmId(),
     isEnabled: true,
-    lastFiredLocalDay: null,
+    lastFiredLocalDay:
+      lastAlarmAttemptLocalDay === getLocalDay(nowDate)
+        ? lastAlarmAttemptLocalDay
+        : null,
     minute: validatedInput.minute,
     updatedAt: now,
     weekdays: validatedInput.weekdays,
@@ -480,6 +516,7 @@ export async function recordSavedAlarmFired(
     updatedAt: now.toISOString(),
   };
 
+  await writeLastAlarmAttemptLocalDay(getLocalDay(now));
   await syncScheduledAlarm(updatedAlarm);
   await writeSavedAlarms(
     savedAlarms.map((alarm) => (alarm.id === alarmId ? updatedAlarm : alarm)),
