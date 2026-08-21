@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   ActionButton,
@@ -155,7 +156,7 @@ export default function QuizScreen() {
   const isActive = quizState.status === 'active';
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         style={styles.scroll}
@@ -258,7 +259,7 @@ export default function QuizScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -292,7 +293,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
     paddingBottom: 24,
     paddingHorizontal: 24,
     paddingTop: 40,
@@ -313,17 +313,17 @@ const styles = StyleSheet.create({
   grid: {
     borderColor: '#f5f5f5',
     borderTopWidth: 1,
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   gridCell: {
     alignItems: 'center',
-    aspectRatio: 1,
     borderColor: '#f5f5f5',
     borderRightWidth: 1,
     borderTopWidth: 1,
+    height: '25%',
     justifyContent: 'center',
-    minHeight: 56,
     width: '33.3333%',
   },
   gridCellPressed: {
@@ -357,6 +357,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   keypadGroup: {
+    flex: 1,
     gap: 20,
   },
   progress: {
