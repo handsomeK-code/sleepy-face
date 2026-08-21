@@ -1,0 +1,8 @@
+{
+  "name": "android-face-proof",
+  "version": "1.0.0",
+  "description": "Native face proof module for Sleepy Face.",
+  "main": "index.ts",
+  "expo-module": "expo-module.config.json",
+  "private": true
+}

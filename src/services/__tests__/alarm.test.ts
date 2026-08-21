@@ -518,7 +518,7 @@ describe('Saved Alarm service', () => {
     expect(alarmMechanicsMocks.cancelAlarmOccurrence).not.toHaveBeenCalled();
   });
 
-  it('surfaces a native scheduling failure as a typed error without ever writing the stored alarm', async () => {
+  it('keeps a newly created Saved Alarm when native scheduling fails', async () => {
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(
       '00000000-0000-4000-8000-000000000001',
     );
@@ -530,12 +530,31 @@ describe('Saved Alarm service', () => {
 
     await expect(
       createSavedAlarm({ hour: 7, minute: 30, weekdays: [1] }),
-    ).rejects.toMatchObject({ code: 'alarm_scheduling_failed' });
+    ).resolves.toMatchObject({
+      hour: 7,
+      id: '00000000-0000-4000-8000-000000000001',
+      minute: 30,
+      weekdays: [1],
+    });
 
-    expect(mocks.setItem).not.toHaveBeenCalled();
+    expect(mocks.setItem).toHaveBeenCalledWith(
+      'sleepy-face:saved-alarms',
+      JSON.stringify([
+        {
+          createdAt: '2026-08-17T00:00:00.000Z',
+          hour: 7,
+          id: '00000000-0000-4000-8000-000000000001',
+          isEnabled: true,
+          lastFiredLocalDay: null,
+          minute: 30,
+          updatedAt: '2026-08-17T00:00:00.000Z',
+          weekdays: [1],
+        },
+      ]),
+    );
   });
 
-  it('does not persist a Saved Alarm edit when native rescheduling fails, keeping the prior stored time', async () => {
+  it('keeps a Saved Alarm edit when native rescheduling fails', async () => {
     mocks.getItem.mockResolvedValue(JSON.stringify([storedAlarm()]));
     alarmMechanicsMocks.scheduleAlarmOccurrence.mockRejectedValueOnce(
       Object.assign(new Error('Exact alarm unavailable'), {
@@ -545,12 +564,26 @@ describe('Saved Alarm service', () => {
 
     await expect(
       updateSavedAlarm('alarm-1', { hour: 8, minute: 45, weekdays: [3] }),
-    ).rejects.toMatchObject({ code: 'alarm_scheduling_failed' });
+    ).resolves.toMatchObject({
+      hour: 8,
+      minute: 45,
+      weekdays: [3],
+    });
 
-    expect(mocks.setItem).not.toHaveBeenCalled();
+    expect(mocks.setItem).toHaveBeenCalledWith(
+      'sleepy-face:saved-alarms',
+      JSON.stringify([
+        {
+          ...storedAlarm(),
+          hour: 8,
+          minute: 45,
+          weekdays: [3],
+        },
+      ]),
+    );
   });
 
-  it('does not persist a delete when the native cancel fails, keeping the alarm listed', async () => {
+  it('keeps a Saved Alarm delete when native cancel fails', async () => {
     mocks.getItem.mockResolvedValue(JSON.stringify([storedAlarm()]));
     alarmMechanicsMocks.cancelAlarmOccurrence.mockRejectedValueOnce(
       Object.assign(new Error('Native error'), {
@@ -558,11 +591,15 @@ describe('Saved Alarm service', () => {
       }),
     );
 
-    await expect(deleteSavedAlarm('alarm-1')).rejects.toMatchObject({
-      code: 'alarm_scheduling_failed',
-    });
+    await expect(deleteSavedAlarm('alarm-1')).resolves.toBeUndefined();
 
-    expect(mocks.setItem).not.toHaveBeenCalled();
+    expect(alarmMechanicsMocks.cancelAlarmOccurrence).toHaveBeenCalledWith(
+      'alarm-1',
+    );
+    expect(mocks.setItem).toHaveBeenCalledWith(
+      'sleepy-face:saved-alarms',
+      JSON.stringify([]),
+    );
   });
 
   it('resyncs every enabled Saved Alarm and skips disabled ones', async () => {

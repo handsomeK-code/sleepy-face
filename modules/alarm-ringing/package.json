@@ -1,0 +1,8 @@
+{
+  "name": "alarm-ringing",
+  "version": "1.0.0",
+  "description": "Sleepy Face native alarm scheduling module.",
+  "main": "index.ts",
+  "types": "index.ts",
+  "private": true
+}

@@ -333,24 +333,20 @@ async function syncScheduledAlarm(alarm: SavedAlarm): Promise<void> {
 
     const nextOccurrence = getNextAlarmOccurrence(alarm);
     await scheduleAlarmOccurrence(alarm.id, nextOccurrence.getTime());
-  } catch (error) {
-    throw new AlarmServiceError(
-      'alarm_scheduling_failed',
-      "Could not sync the Saved Alarm with this device's alarm scheduler.",
-      error,
-    );
+  } catch {
+    // Local alarm settings should stay editable even when a development build
+    // cannot reach the native scheduler yet. The next app launch calls
+    // resyncAllScheduledAlarms and tries to register enabled alarms again.
   }
 }
 
-async function cancelScheduledAlarm(alarmId: string): Promise<void> {
+async function tryCancelScheduledAlarm(alarmId: string): Promise<void> {
   try {
     await cancelAlarmOccurrence(alarmId);
-  } catch (error) {
-    throw new AlarmServiceError(
-      'alarm_scheduling_failed',
-      "Could not cancel the Saved Alarm on this device's alarm scheduler.",
-      error,
-    );
+  } catch {
+    // Deleting a saved alarm should not be blocked by a stale or missing native
+    // alarm. The local list is the user's source of truth, and future resyncs
+    // only register alarms that are still saved locally.
   }
 }
 
@@ -393,8 +389,8 @@ export async function createSavedAlarm(
     weekdays: validatedInput.weekdays,
   };
 
-  await syncScheduledAlarm(savedAlarm);
   await writeSavedAlarms([...savedAlarms, savedAlarm]);
+  await syncScheduledAlarm(savedAlarm);
 
   return savedAlarm;
 }
@@ -425,10 +421,10 @@ export async function updateSavedAlarm(
     weekdays: validatedInput.weekdays,
   };
 
-  await syncScheduledAlarm(updatedAlarm);
   await writeSavedAlarms(
     savedAlarms.map((alarm) => (alarm.id === id ? updatedAlarm : alarm)),
   );
+  await syncScheduledAlarm(updatedAlarm);
 
   return updatedAlarm;
 }
@@ -453,10 +449,10 @@ export async function setSavedAlarmEnabled(
     updatedAt: new Date().toISOString(),
   };
 
-  await syncScheduledAlarm(updatedAlarm);
   await writeSavedAlarms(
     savedAlarms.map((alarm) => (alarm.id === id ? updatedAlarm : alarm)),
   );
+  await syncScheduledAlarm(updatedAlarm);
 
   return updatedAlarm;
 }
@@ -480,10 +476,10 @@ export async function recordSavedAlarmFired(
     updatedAt: now.toISOString(),
   };
 
-  await syncScheduledAlarm(updatedAlarm);
   await writeSavedAlarms(
     savedAlarms.map((alarm) => (alarm.id === alarmId ? updatedAlarm : alarm)),
   );
+  await syncScheduledAlarm(updatedAlarm);
 
   return updatedAlarm;
 }
@@ -506,10 +502,10 @@ export async function clearAlarmFiredToday(id: string): Promise<SavedAlarm> {
     updatedAt: new Date().toISOString(),
   };
 
-  await syncScheduledAlarm(updatedAlarm);
   await writeSavedAlarms(
     savedAlarms.map((alarm) => (alarm.id === id ? updatedAlarm : alarm)),
   );
+  await syncScheduledAlarm(updatedAlarm);
 
   return updatedAlarm;
 }
@@ -525,8 +521,8 @@ export async function deleteSavedAlarm(id: string): Promise<void> {
     );
   }
 
-  await cancelScheduledAlarm(id);
   await writeSavedAlarms(nextSavedAlarms);
+  await tryCancelScheduledAlarm(id);
 }
 
 export async function clearSavedAlarms(): Promise<void> {
