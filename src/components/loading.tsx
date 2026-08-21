@@ -1,5 +1,9 @@
+import { useEffect, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
+  Animated,
+  Easing,
   StyleSheet,
   Text,
   View,
@@ -101,6 +105,93 @@ export function LoadingButtonContent({
   );
 }
 
+type FaceCheckLoadingProps = {
+  message?: string;
+};
+
+export function FaceCheckLoading({
+  message = '顔を確認しています...',
+}: FaceCheckLoadingProps) {
+  const [pulse] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    let isMounted = true;
+    let animation: Animated.CompositeAnimation | undefined;
+
+    void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
+      if (!isMounted) {
+        return;
+      }
+
+      if (reduceMotion) {
+        pulse.setValue(1);
+        return;
+      }
+
+      animation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, {
+            duration: 700,
+            easing: Easing.inOut(Easing.ease),
+            toValue: 1,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulse, {
+            duration: 700,
+            easing: Easing.inOut(Easing.ease),
+            toValue: 0,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      animation.start();
+    });
+
+    return () => {
+      isMounted = false;
+      animation?.stop();
+    };
+  }, [pulse]);
+
+  return (
+    <View
+      accessibilityLabel={`${message} そのままお待ちください`}
+      accessibilityLiveRegion="polite"
+      accessibilityRole="progressbar"
+      style={styles.faceCheckOverlay}
+    >
+      <Animated.View
+        style={[
+          styles.faceCheckRing,
+          {
+            opacity: pulse.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.42, 1],
+            }),
+            transform: [
+              {
+                scale: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.96, 1.04],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <View style={styles.faceCheckCircle}>
+          <LoadingIndicator accessibilityLabel={message} tone="light" />
+        </View>
+      </Animated.View>
+
+      <View style={styles.faceCheckCopy}>
+        <Text style={styles.faceCheckTitle}>{message}</Text>
+        <Text style={styles.faceCheckCaption}>そのままお待ちください</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   state: {
     alignItems: 'center',
@@ -139,5 +230,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
+  },
+  faceCheckOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    backgroundColor: 'rgba(23, 23, 23, 0.94)',
+    gap: 36,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    zIndex: 10,
+  },
+  faceCheckRing: {
+    alignItems: 'center',
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    borderRadius: 48,
+    borderWidth: 3,
+    height: 96,
+    justifyContent: 'center',
+    width: 96,
+  },
+  faceCheckCircle: {
+    alignItems: 'center',
+    borderColor: '#ffffff',
+    borderRadius: 36,
+    borderWidth: 2,
+    height: 72,
+    justifyContent: 'center',
+    width: 72,
+  },
+  faceCheckCopy: {
+    gap: 8,
+  },
+  faceCheckTitle: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 28,
+    textAlign: 'center',
+  },
+  faceCheckCaption: {
+    color: '#a3a3a3',
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
   },
 });
