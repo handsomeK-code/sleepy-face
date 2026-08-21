@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LoadingState } from '@/components/loading';
 import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
@@ -347,9 +348,12 @@ export default function EditAlarmScreen() {
         </View>
 
         {isLoading ? (
-          <View style={styles.loadingArea}>
-            <Text style={styles.loadingText}>読み込み中...</Text>
-          </View>
+          <LoadingState
+            message="アラームを読み込んでいます..."
+            size="large"
+            style={styles.loadingArea}
+            variant="screen"
+          />
         ) : (
           <>
             <View style={styles.timeSection}>
@@ -472,14 +476,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   loadingArea: {
-    alignItems: 'center',
     flex: 1,
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: '#737373',
-    fontSize: 15,
-    fontWeight: '700',
   },
   scroll: {
     flex: 1,
