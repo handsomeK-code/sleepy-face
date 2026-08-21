@@ -41,11 +41,18 @@ async function sendExpoPush(messages: PushMessage[]): Promise<void> {
     method: 'POST',
   });
 
+  const responseBody = await response.text();
+
+  // Expo returns HTTP 200 even when individual tokens are rejected (e.g. invalid format,
+  // DeviceNotRegistered) — the per-message outcome is only visible in the response body,
+  // so this always logs it rather than only on a non-2xx status.
+  console.log(
+    '[DEBUG-pushfn] Expo push response',
+    JSON.stringify({ ok: response.ok, status: response.status, responseBody }),
+  );
+
   if (!response.ok) {
-    console.error(
-      '[push-on-failure] Expo push send failed',
-      await response.text(),
-    );
+    console.error('[push-on-failure] Expo push send failed', responseBody);
   }
 }
 
@@ -60,8 +67,12 @@ Deno.serve(async (request: Request) => {
   }
 
   const payload: unknown = await request.json();
+  console.log('[DEBUG-pushfn] payload', JSON.stringify(payload));
 
   if (!isPhotosInsertPayload(payload)) {
+    console.log(
+      '[DEBUG-pushfn] payload did not match PhotosInsertPayload shape',
+    );
     return new Response('Ignored: not a recognised photos insert payload', {
       status: 200,
     });
@@ -74,32 +85,49 @@ Deno.serve(async (request: Request) => {
 
   const messages = await notifyFriendsOfFailure(payload.record.profile_id, {
     getFailedProfile: async (profileId): Promise<FailedProfile | null> => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name')
         .eq('id', profileId)
         .maybeSingle();
 
+      console.log(
+        '[DEBUG-pushfn] getFailedProfile',
+        JSON.stringify({ data, error, profileId }),
+      );
+
       return data;
     },
     listFriendRelations: async (profileId): Promise<FriendRelationRow[]> => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('friends_relations')
         .select('profile_id, friend_profile_id')
         .or(`profile_id.eq.${profileId},friend_profile_id.eq.${profileId}`);
 
+      console.log(
+        '[DEBUG-pushfn] listFriendRelations',
+        JSON.stringify({ count: data?.length ?? 0, data, error, profileId }),
+      );
+
       return data ?? [];
     },
     listPushTokens: async (profileIds): Promise<PushTokenRow[]> => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('push_tokens')
         .select('profile_id, token')
         .in('profile_id', profileIds);
+
+      console.log(
+        '[DEBUG-pushfn] listPushTokens',
+        JSON.stringify({ count: data?.length ?? 0, data, error, profileIds }),
+      );
 
       return data ?? [];
     },
     sendPush: sendExpoPush,
   });
+
+  console.log('[DEBUG-pushfn] messages built', JSON.stringify(messages));
 
   return new Response(JSON.stringify({ sent: messages.length }), {
     headers: { 'Content-Type': 'application/json' },

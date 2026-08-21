@@ -58,6 +58,9 @@
         "projectId": "c6f23530-8c9c-4f32-aa96-e593f6b00324"
       }
     },
-    "owner": "handsomeks-team"
+    "owner": "handsomeks-team",
+    "ios": {
+      "bundleIdentifier": "com.team5.sleepyface"
+    }
   }
 }
