@@ -232,12 +232,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   faceCheckOverlay: {
-    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     backgroundColor: 'rgba(23, 23, 23, 0.94)',
+    bottom: 0,
     gap: 36,
     justifyContent: 'center',
+    left: 0,
     paddingHorizontal: 24,
+    position: 'absolute',
+    right: 0,
+    top: 0,
     zIndex: 10,
   },
   faceCheckRing: {
