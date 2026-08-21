@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { listFriendRelations, resolveFriendProfileId } from '@/services/friend';
-import { toProfileIconId, type ProfileIconId } from '@/services/user';
+import { toProfileIconValue } from '@/services/user';
 
 export type FriendsFeedItem = {
   photoId: string;
@@ -8,7 +8,8 @@ export type FriendsFeedItem = {
   createdAt: string;
   profileId: string;
   displayName: string;
-  iconId: ProfileIconId;
+  // Either a preset icon identifier or a custom photo URL — see isCustomProfilePhotoUrl.
+  iconId: string;
 };
 
 export type HomeFeedServiceErrorCode = 'not_authenticated' | 'unexpected_error';
@@ -110,7 +111,7 @@ export async function listFriendsFeed(): Promise<FriendsFeedItem[]> {
     return {
       createdAt: photo.created_at,
       displayName: profile?.display_name ?? '不明なユーザー',
-      iconId: toProfileIconId(profile?.icon_url),
+      iconId: toProfileIconValue(profile?.icon_url),
       imageUrl: photo.image_url,
       photoId: photo.id,
       profileId: photo.profile_id,

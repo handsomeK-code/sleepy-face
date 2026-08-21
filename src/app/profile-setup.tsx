@@ -1,7 +1,9 @@
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   InteractionManager,
   KeyboardAvoidingView,
   Platform,
@@ -15,20 +17,27 @@ import {
 } from 'react-native';
 
 import {
+  getProfileIconSource,
   PROFILE_ICON_LABELS,
   PROFILE_ICON_SOURCES,
 } from '@/constants/profile-icons';
 import { getCurrentUserId } from '@/services/auth';
+import {
+  ProfileIconPhotoUploadError,
+  uploadProfileIconPhoto,
+} from '@/services/profile-icon-photo';
 import {
   DEFAULT_PROFILE_ICON_ID,
   PROFILE_ICON_IDS,
   UserServiceError,
   createProfile,
   getMyProfile,
+  isCustomProfilePhotoUrl,
   normalizePublicUserId,
+  toProfileIconId,
+  updateProfile,
   validateInitialSetupInput,
   type InitialSetupValidationErrorCode,
-  type ProfileIconId,
 } from '@/services/user';
 
 // Home is typically the first screen navigated to in a session, and replacing to it
@@ -73,10 +82,11 @@ function getCreateProfileErrorMessage(error: unknown): string {
 export default function ProfileSetupScreen() {
   const [displayName, setDisplayName] = useState('');
   const [publicUserId, setPublicUserId] = useState('');
-  const [iconId, setIconId] = useState<ProfileIconId>(DEFAULT_PROFILE_ICON_ID);
+  const [iconId, setIconId] = useState<string>(DEFAULT_PROFILE_ICON_ID);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPickingPhoto, setIsPickingPhoto] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -125,6 +135,47 @@ export default function ProfileSetupScreen() {
     setPublicUserId(normalizePublicUserId(value));
   }, []);
 
+  const handlePickPhoto = useCallback(async () => {
+    setErrorMessage(null);
+
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      setErrorMessage(
+        '写真ライブラリへのアクセスが許可されていません。設定アプリから許可してください。',
+      );
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      mediaTypes: ['images'],
+      quality: 0.8,
+    });
+
+    if (pickerResult.canceled) {
+      return;
+    }
+
+    setIsPickingPhoto(true);
+
+    try {
+      const photoUrl = await uploadProfileIconPhoto(pickerResult.assets[0].uri);
+
+      setIconId(photoUrl);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof ProfileIconPhotoUploadError
+          ? '写真をアップロードできませんでした。もう一度お試しください。'
+          : '写真を処理できませんでした。もう一度お試しください。',
+      );
+    } finally {
+      setIsPickingPhoto(false);
+    }
+  }, []);
+
   const handleSubmit = useCallback(async () => {
     setErrorMessage(null);
 
@@ -142,8 +193,23 @@ export default function ProfileSetupScreen() {
     setPublicUserId(validationResult.value.publicUserId);
     setIsSubmitting(true);
 
+    // create_profile only accepts a known preset icon identifier; a custom photo goes
+    // through the profiles.icon_url update path right after the Profile row exists.
+    const isCustomPhoto = isCustomProfilePhotoUrl(iconId);
+
     try {
-      await createProfile({ ...validationResult.value, iconId });
+      await createProfile({
+        ...validationResult.value,
+        iconId: toProfileIconId(iconId),
+      });
+
+      if (isCustomPhoto) {
+        await updateProfile({
+          displayName: validationResult.value.displayName,
+          iconId,
+        });
+      }
+
       replaceToHome();
     } catch (error) {
       if (
@@ -199,10 +265,26 @@ export default function ProfileSetupScreen() {
               <View style={styles.avatarPreview}>
                 <Image
                   contentFit="cover"
-                  source={PROFILE_ICON_SOURCES[iconId]}
+                  source={getProfileIconSource(iconId)}
                   style={styles.avatarPreviewImage}
                 />
               </View>
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={isSubmitting || isPickingPhoto}
+                onPress={handlePickPhoto}
+                style={({ pressed }) => [
+                  styles.pickPhotoButton,
+                  pressed && styles.iconOptionPressed,
+                ]}
+              >
+                {isPickingPhoto ? (
+                  <ActivityIndicator color="#171717" size="small" />
+                ) : (
+                  <Text style={styles.pickPhotoButtonText}>写真を選ぶ</Text>
+                )}
+              </Pressable>
 
               <View style={styles.iconGrid}>
                 {PROFILE_ICON_IDS.map((id) => {
@@ -354,6 +436,21 @@ const styles = StyleSheet.create({
   avatarPreviewImage: {
     height: '100%',
     width: '100%',
+  },
+  pickPhotoButton: {
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 16,
+  },
+  pickPhotoButtonText: {
+    color: '#171717',
+    fontSize: 13,
+    fontWeight: '700',
   },
   iconGrid: {
     flexDirection: 'row',

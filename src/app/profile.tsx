@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -16,11 +17,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
 import {
+  getProfileIconSource,
   PROFILE_ICON_LABELS,
   PROFILE_ICON_SOURCES,
 } from '@/constants/profile-icons';
 import { signOut } from '@/services/auth';
 import { getDevMode, setDevMode } from '@/services/dev-mode';
+import {
+  ProfileIconPhotoUploadError,
+  uploadProfileIconPhoto,
+} from '@/services/profile-icon-photo';
 import {
   ProfilePhotosServiceError,
   listMyFailurePhotos,
@@ -33,7 +39,6 @@ import {
   updateProfile,
   validateProfileUpdateInput,
   type Profile,
-  type ProfileIconId,
   type ProfileUpdateValidationErrorCode,
 } from '@/services/user';
 
@@ -87,7 +92,8 @@ function formatPhotoDate(isoDate: string): string {
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
-  const [iconId, setIconId] = useState<ProfileIconId>('human');
+  const [iconId, setIconId] = useState('human');
+  const [isPickingPhoto, setIsPickingPhoto] = useState(false);
   const [photos, setPhotos] = useState<MyFailurePhoto[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -176,6 +182,48 @@ export default function ProfileScreen() {
     }
   }, [displayName, iconId]);
 
+  const handlePickPhoto = useCallback(async () => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      setErrorMessage(
+        '写真ライブラリへのアクセスが許可されていません。設定アプリから許可してください。',
+      );
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      mediaTypes: ['images'],
+      quality: 0.8,
+    });
+
+    if (pickerResult.canceled) {
+      return;
+    }
+
+    setIsPickingPhoto(true);
+
+    try {
+      const photoUrl = await uploadProfileIconPhoto(pickerResult.assets[0].uri);
+
+      setIconId(photoUrl);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof ProfileIconPhotoUploadError
+          ? '写真をアップロードできませんでした。もう一度お試しください。'
+          : '写真を処理できませんでした。もう一度お試しください。',
+      );
+    } finally {
+      setIsPickingPhoto(false);
+    }
+  }, []);
+
   const handleEnableDevMode = useCallback(async () => {
     await setDevMode(true);
     setIsDevMode(true);
@@ -252,10 +300,28 @@ export default function ProfileScreen() {
                     <View style={styles.avatarPreview}>
                       <Image
                         contentFit="cover"
-                        source={PROFILE_ICON_SOURCES[iconId]}
+                        source={getProfileIconSource(iconId)}
                         style={styles.avatarPreviewImage}
                       />
                     </View>
+
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={isSaving || isPickingPhoto}
+                      onPress={handlePickPhoto}
+                      style={({ pressed }) => [
+                        styles.pickPhotoButton,
+                        pressed && styles.buttonPressed,
+                      ]}
+                    >
+                      {isPickingPhoto ? (
+                        <ActivityIndicator color="#171717" size="small" />
+                      ) : (
+                        <Text style={styles.pickPhotoButtonText}>
+                          写真を選ぶ
+                        </Text>
+                      )}
+                    </Pressable>
 
                     <View style={styles.iconGrid}>
                       {PROFILE_ICON_IDS.map((id) => {
@@ -447,6 +513,21 @@ const styles = StyleSheet.create({
   avatarPreviewImage: {
     height: '100%',
     width: '100%',
+  },
+  pickPhotoButton: {
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 16,
+  },
+  pickPhotoButtonText: {
+    color: '#171717',
+    fontSize: 13,
+    fontWeight: '700',
   },
   iconGrid: {
     flexDirection: 'row',
