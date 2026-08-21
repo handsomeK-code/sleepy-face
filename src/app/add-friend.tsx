@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FriendListLoadingSkeleton } from '@/components/loading-skeletons';
 import { PROFILE_ICON_SOURCES } from '@/constants/profile-icons';
 import {
   FriendServiceError,
@@ -232,10 +232,7 @@ export default function AddFriendScreen() {
 
         <View style={styles.content}>
           {isLoadingRelations ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator color="#171717" />
-              <Text style={styles.loadingText}>友達情報を確認中...</Text>
-            </View>
+            <FriendListLoadingSkeleton />
           ) : (
             <FlatList
               contentContainerStyle={styles.resultList}
@@ -403,15 +400,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     marginTop: 12,
-  },
-  loadingBox: {
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 40,
-  },
-  loadingText: {
-    color: '#737373',
-    fontSize: 14,
   },
   listHeader: {
     paddingBottom: 4,

@@ -2,7 +2,6 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
@@ -15,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
+import { ProfileLoadingSkeleton } from '@/components/loading-skeletons';
 import {
   PROFILE_ICON_LABELS,
   PROFILE_ICON_SOURCES,
@@ -228,12 +228,7 @@ export default function ProfileScreen() {
 
         <View style={styles.content}>
           {isLoading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator color="#171717" />
-              <Text style={styles.loadingText}>
-                プロフィールを読み込み中...
-              </Text>
-            </View>
+            <ProfileLoadingSkeleton />
           ) : (
             <FlatList
               contentContainerStyle={styles.photoList}
@@ -415,15 +410,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
-  },
-  loadingBox: {
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 44,
-  },
-  loadingText: {
-    color: '#737373',
-    fontSize: 14,
   },
   listHeader: {
     paddingBottom: 4,
