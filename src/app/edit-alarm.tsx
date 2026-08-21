@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { LoadingState } from '@/components/loading';
+import { LoadingButtonContent, LoadingState } from '@/components/loading';
 import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
@@ -411,9 +411,12 @@ export default function EditAlarmScreen() {
                   (pressed || isDeleting) && styles.deleteButtonPressed,
                 ]}
               >
-                <Text style={styles.deleteButtonText}>
-                  {isDeleting ? '削除中...' : 'アラームを削除'}
-                </Text>
+                <LoadingButtonContent
+                  label="アラームを削除"
+                  loading={isDeleting}
+                  loadingLabel="削除中..."
+                  textStyle={styles.deleteButtonText}
+                />
               </Pressable>
             </ScrollView>
           </>
@@ -433,9 +436,13 @@ export default function EditAlarmScreen() {
               (pressed || isSaving || isBusy) && styles.saveButtonPressed,
             ]}
           >
-            <Text style={styles.saveButtonText}>
-              {isSaving ? '保存中...' : '保存'}
-            </Text>
+            <LoadingButtonContent
+              label="保存"
+              loading={isSaving}
+              loadingLabel="保存中..."
+              textStyle={styles.saveButtonText}
+              tone="light"
+            />
           </Pressable>
         </View>
       </View>

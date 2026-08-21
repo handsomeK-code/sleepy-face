@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
+import { LoadingButtonContent } from '@/components/loading';
 import { ProfileLoadingSkeleton } from '@/components/loading-skeletons';
 import {
   PROFILE_ICON_LABELS,
@@ -310,9 +311,13 @@ export default function ProfileScreen() {
                       isSaving && styles.saveButtonDisabled,
                     ]}
                   >
-                    <Text style={styles.saveButtonText}>
-                      {isSaving ? '保存中...' : '保存する'}
-                    </Text>
+                    <LoadingButtonContent
+                      label="保存する"
+                      loading={isSaving}
+                      loadingLabel="保存中..."
+                      textStyle={styles.saveButtonText}
+                      tone="light"
+                    />
                   </Pressable>
 
                   {errorMessage && (
@@ -332,9 +337,12 @@ export default function ProfileScreen() {
                       isSigningOut && styles.saveButtonDisabled,
                     ]}
                   >
-                    <Text style={styles.signOutButtonText}>
-                      {isSigningOut ? 'ログアウト中...' : 'ログアウト'}
-                    </Text>
+                    <LoadingButtonContent
+                      label="ログアウト"
+                      loading={isSigningOut}
+                      loadingLabel="ログアウト中..."
+                      textStyle={styles.signOutButtonText}
+                    />
                   </Pressable>
 
                   <Text style={styles.sectionTitle}>失敗の記録</Text>

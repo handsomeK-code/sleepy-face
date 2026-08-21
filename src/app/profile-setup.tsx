@@ -16,7 +16,7 @@ import {
   PROFILE_ICON_LABELS,
   PROFILE_ICON_SOURCES,
 } from '@/constants/profile-icons';
-import { LoadingState } from '@/components/loading';
+import { LoadingButtonContent, LoadingState } from '@/components/loading';
 import { getCurrentUserId } from '@/services/auth';
 import {
   DEFAULT_PROFILE_ICON_ID,
@@ -273,9 +273,13 @@ export default function ProfileSetupScreen() {
               isSubmitting && styles.submitButtonDisabled,
             ]}
           >
-            <Text style={styles.submitButtonText}>
-              {isSubmitting ? '作成中...' : '登録する'}
-            </Text>
+            <LoadingButtonContent
+              label="登録する"
+              loading={isSubmitting}
+              loadingLabel="作成中..."
+              textStyle={styles.submitButtonText}
+              tone="light"
+            />
           </Pressable>
 
           {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}

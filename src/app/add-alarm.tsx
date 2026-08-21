@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LoadingButtonContent } from '@/components/loading';
 import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
@@ -316,9 +317,13 @@ export default function AddAlarmScreen() {
               (pressed || isSaving) && styles.saveButtonPressed,
             ]}
           >
-            <Text style={styles.saveButtonText}>
-              {isSaving ? '保存中...' : '保存'}
-            </Text>
+            <LoadingButtonContent
+              label="保存"
+              loading={isSaving}
+              loadingLabel="保存中..."
+              textStyle={styles.saveButtonText}
+              tone="light"
+            />
           </Pressable>
         </View>
       </View>

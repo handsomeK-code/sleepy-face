@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LoadingButtonContent } from '@/components/loading';
 import { FriendListLoadingSkeleton } from '@/components/loading-skeletons';
 import { PROFILE_ICON_SOURCES } from '@/constants/profile-icons';
 import {
@@ -201,9 +202,17 @@ export default function AddFriendScreen() {
             (isFriend || isAdding) && styles.addButtonDisabled,
           ]}
         >
-          <Text style={styles.addButtonText}>
-            {isFriend ? '追加済み' : isAdding ? '追加中...' : '追加'}
-          </Text>
+          {isFriend ? (
+            <Text style={styles.addButtonText}>追加済み</Text>
+          ) : (
+            <LoadingButtonContent
+              label="追加"
+              loading={isAdding}
+              loadingLabel=""
+              textStyle={styles.addButtonText}
+              tone="light"
+            />
+          )}
         </Pressable>
       </View>
     );
@@ -298,9 +307,13 @@ export default function AddFriendScreen() {
                       isSearching && styles.searchButtonDisabled,
                     ]}
                   >
-                    <Text style={styles.searchButtonText}>
-                      {isSearching ? '検索中...' : '検索'}
-                    </Text>
+                    <LoadingButtonContent
+                      label="検索"
+                      loading={isSearching}
+                      loadingLabel="検索中..."
+                      textStyle={styles.searchButtonText}
+                      tone="light"
+                    />
                   </Pressable>
 
                   {errorMessage && (

@@ -92,8 +92,11 @@ export function LoadingButtonContent({
 
   return (
     <View accessibilityLiveRegion="polite" style={styles.buttonContent}>
-      <LoadingIndicator accessibilityLabel={loadingLabel} tone={tone} />
-      <Text style={textStyle}>{loadingLabel}</Text>
+      <LoadingIndicator
+        accessibilityLabel={loadingLabel || `${label}を処理中`}
+        tone={tone}
+      />
+      {loadingLabel.length > 0 && <Text style={textStyle}>{loadingLabel}</Text>}
     </View>
   );
 }
