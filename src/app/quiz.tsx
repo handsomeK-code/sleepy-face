@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ActionButton,
   formatRemainingTime,
+  getRemainingMs,
 } from '@/components/wake-challenge-ui';
 import { resumeTimer, useAlarmTimer } from '@/services/alarm-timer';
 import { getDevMode } from '@/services/dev-mode';
@@ -20,6 +21,8 @@ import {
   type QuizKeypadKey,
 } from '@/services/quiz-keypad';
 import type { WakeChallengeFailureReason } from '@/services/wake-challenge-rules';
+
+const TIMER_WARNING_THRESHOLD_MS = 60_000;
 
 const KEYPAD_KEYS: QuizKeypadKey[] = [
   '1',
@@ -154,6 +157,7 @@ export default function QuizScreen() {
   }
 
   const isActive = quizState.status === 'active';
+  const isTimeRunningLow = getRemainingMs(timer) < TIMER_WARNING_THRESHOLD_MS;
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
@@ -163,7 +167,12 @@ export default function QuizScreen() {
       >
         <View style={styles.header}>
           <View style={styles.timerPill}>
-            <Text style={styles.timerPillText}>
+            <Text
+              style={[
+                styles.timerPillText,
+                isTimeRunningLow && styles.timerPillTextWarning,
+              ]}
+            >
               あと {formatRemainingTime(timer)}
             </Text>
           </View>
@@ -402,5 +411,8 @@ const styles = StyleSheet.create({
     color: '#171717',
     fontSize: 17,
     fontWeight: '800',
+  },
+  timerPillTextWarning: {
+    color: '#dc2626',
   },
 });
