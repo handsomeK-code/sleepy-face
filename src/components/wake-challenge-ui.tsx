@@ -6,9 +6,12 @@ import type { AlarmTimerState } from '@/services/alarm-timer';
 export const ALARM_TIMER_SECONDS = 180;
 export const MAX_BAD_PHOTO_ATTEMPTS = 3;
 
+export function getRemainingMs(timer: AlarmTimerState | null): number {
+  return timer?.remainingMs ?? ALARM_TIMER_SECONDS * 1000;
+}
+
 export function formatRemainingTime(timer: AlarmTimerState | null): string {
-  const remainingMs = timer?.remainingMs ?? ALARM_TIMER_SECONDS * 1000;
-  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  const totalSeconds = Math.max(0, Math.ceil(getRemainingMs(timer) / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 

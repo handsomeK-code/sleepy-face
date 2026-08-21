@@ -3,6 +3,8 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   InteractionManager,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -185,106 +187,113 @@ export default function ProfileSetupScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
       >
-        <View style={styles.topContent}>
-          <Text style={styles.title}>プロフィール設定</Text>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.topContent}>
+            <Text style={styles.title}>プロフィール設定</Text>
 
-          <View style={styles.avatarSection}>
-            <View style={styles.avatarPreview}>
-              <Image
-                contentFit="cover"
-                source={PROFILE_ICON_SOURCES[iconId]}
-                style={styles.avatarPreviewImage}
+            <View style={styles.avatarSection}>
+              <View style={styles.avatarPreview}>
+                <Image
+                  contentFit="cover"
+                  source={PROFILE_ICON_SOURCES[iconId]}
+                  style={styles.avatarPreviewImage}
+                />
+              </View>
+
+              <View style={styles.iconGrid}>
+                {PROFILE_ICON_IDS.map((id) => {
+                  const isSelected = id === iconId;
+
+                  return (
+                    <Pressable
+                      accessibilityLabel={PROFILE_ICON_LABELS[id]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: isSelected }}
+                      disabled={isSubmitting}
+                      key={id}
+                      onPress={() => setIconId(id)}
+                      style={({ pressed }) => [
+                        styles.iconOption,
+                        isSelected && styles.iconOptionSelected,
+                        pressed && styles.iconOptionPressed,
+                      ]}
+                    >
+                      <Image
+                        contentFit="cover"
+                        source={PROFILE_ICON_SOURCES[id]}
+                        style={styles.iconOptionImage}
+                      />
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.avatarCaption}>
+                プロフィールアイコンを選んでください
+              </Text>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>ユーザー名</Text>
+              <TextInput
+                editable={!isSubmitting}
+                onChangeText={setDisplayName}
+                placeholder="例：山田 太郎"
+                placeholderTextColor="#a3a3a3"
+                style={styles.input}
+                value={displayName}
               />
             </View>
 
-            <View style={styles.iconGrid}>
-              {PROFILE_ICON_IDS.map((id) => {
-                const isSelected = id === iconId;
-
-                return (
-                  <Pressable
-                    accessibilityLabel={PROFILE_ICON_LABELS[id]}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: isSelected }}
-                    disabled={isSubmitting}
-                    key={id}
-                    onPress={() => setIconId(id)}
-                    style={({ pressed }) => [
-                      styles.iconOption,
-                      isSelected && styles.iconOptionSelected,
-                      pressed && styles.iconOptionPressed,
-                    ]}
-                  >
-                    <Image
-                      contentFit="cover"
-                      source={PROFILE_ICON_SOURCES[id]}
-                      style={styles.iconOptionImage}
-                    />
-                  </Pressable>
-                );
-              })}
+            <View style={styles.field}>
+              <Text style={styles.label}>userID</Text>
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isSubmitting}
+                onChangeText={handlePublicUserIdChange}
+                placeholder="例：yamada_kun"
+                placeholderTextColor="#a3a3a3"
+                style={styles.input}
+                value={publicUserId}
+              />
+              <Text style={styles.helperText}>友達検索に使用します</Text>
             </View>
-
-            <Text style={styles.avatarCaption}>
-              プロフィールアイコンを選んでください
-            </Text>
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>ユーザー名</Text>
-            <TextInput
-              editable={!isSubmitting}
-              onChangeText={setDisplayName}
-              placeholder="例：山田 太郎"
-              placeholderTextColor="#a3a3a3"
-              style={styles.input}
-              value={displayName}
-            />
+          <View style={styles.bottomContent}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isSubmitting}
+              onPress={handleSubmit}
+              style={({ pressed }) => [
+                styles.submitButton,
+                pressed && styles.submitButtonPressed,
+                isSubmitting && styles.submitButtonDisabled,
+              ]}
+            >
+              <LoadingButtonContent
+                label="登録する"
+                loading={isSubmitting}
+                loadingLabel="作成中..."
+                textStyle={styles.submitButtonText}
+                tone="light"
+              />
+            </Pressable>
+
+            {errorMessage && (
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            )}
           </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>userID</Text>
-            <TextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isSubmitting}
-              onChangeText={handlePublicUserIdChange}
-              placeholder="例：yamada_kun"
-              placeholderTextColor="#a3a3a3"
-              style={styles.input}
-              value={publicUserId}
-            />
-            <Text style={styles.helperText}>友達検索に使用します</Text>
-          </View>
-        </View>
-
-        <View style={styles.bottomContent}>
-          <Pressable
-            accessibilityRole="button"
-            disabled={isSubmitting}
-            onPress={handleSubmit}
-            style={({ pressed }) => [
-              styles.submitButton,
-              pressed && styles.submitButtonPressed,
-              isSubmitting && styles.submitButtonDisabled,
-            ]}
-          >
-            <LoadingButtonContent
-              label="登録する"
-              loading={isSubmitting}
-              loadingLabel="作成中..."
-              textStyle={styles.submitButtonText}
-              tone="light"
-            />
-          </Pressable>
-
-          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -293,6 +302,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#fafafa',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   container: {
     flexGrow: 1,
