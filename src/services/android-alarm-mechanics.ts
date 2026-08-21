@@ -20,10 +20,16 @@ export type RingingAlarmState = {
   startedAt: string;
 };
 
+export type PendingWakeChallengeRoute = {
+  alarmId: string;
+  startedAt: string;
+};
+
 type NativeAndroidAlarmMechanicsModule = {
   cancelSavedAlarmOccurrence(alarmId: string): Promise<void>;
   cancelScheduledTestAlarm(): Promise<void>;
   canScheduleExactAlarms(): Promise<boolean>;
+  consumePendingWakeChallengeRoute?: () => Promise<PendingWakeChallengeRoute | null>;
   getNotificationPermissionStatus(): Promise<NotificationPermissionStatus>;
   getRingingAlarmState(): Promise<RingingAlarmState | null>;
   openExactAlarmSettings(): Promise<void>;
@@ -159,6 +165,16 @@ export function cancelAlarmOccurrence(alarmId: string): Promise<void> {
 
 export function stopRingingAlarm(): Promise<void> {
   return callNative((module) => module.stopRingingAlarm());
+}
+
+export async function consumePendingWakeChallengeRoute(): Promise<PendingWakeChallengeRoute | null> {
+  return callNative((module) => {
+    if (!module.consumePendingWakeChallengeRoute) {
+      return Promise.resolve(null);
+    }
+
+    return module.consumePendingWakeChallengeRoute();
+  });
 }
 
 export type EnsureAlarmPermissionsResult =

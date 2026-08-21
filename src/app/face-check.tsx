@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import {
+  ALARM_TIMER_SECONDS,
   MAX_BAD_PHOTO_ATTEMPTS,
   formatRemainingTime,
 } from '@/components/wake-challenge-ui';
@@ -19,8 +20,10 @@ import {
   getAlarmTimerState,
   pauseTimer,
   resumeTimer,
+  startTimerFromStartedAt,
   useAlarmTimer,
 } from '@/services/alarm-timer';
+import { recordSavedAlarmFired } from '@/services/alarm';
 import {
   checkFaceProof,
   shouldRetainFaceProofPhoto,
@@ -44,6 +47,7 @@ export default function FaceCheckScreen() {
   const params = useLocalSearchParams<{
     alarmId?: string;
     badPhotoAttempts?: string;
+    startedAt?: string;
   }>();
   const cameraRef = useRef<CameraView>(null);
   const timer = useAlarmTimer();
@@ -52,6 +56,28 @@ export default function FaceCheckScreen() {
   const [message, setMessage] = useState('顔が写るように撮影してください。');
   const [isBusy, setIsBusy] = useState(false);
   const badPhotoAttempts = Number(params.badPhotoAttempts ?? '0') || 0;
+
+  useEffect(() => {
+    if (!params.alarmId) {
+      return;
+    }
+
+    recordSavedAlarmFired(params.alarmId).catch(() => {});
+  }, [params.alarmId]);
+
+  useEffect(() => {
+    if (!params.startedAt) {
+      return;
+    }
+
+    const currentTimer = getAlarmTimerState();
+
+    if (currentTimer && currentTimer.status !== 'expired') {
+      return;
+    }
+
+    startTimerFromStartedAt(ALARM_TIMER_SECONDS, params.startedAt);
+  }, [params.startedAt]);
 
   useEffect(() => {
     if (timer?.status === 'expired') {

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
   deleteSavedAlarm,
@@ -60,19 +59,24 @@ function getAlarmErrorMessage(error: unknown): string {
     if (error.code === 'alarm_scheduling_failed') {
       return 'アラームを端末に登録できませんでした。';
     }
+
+    if (error.code === 'storage_write_failed') {
+      return '端末内にアラームを保存できませんでした。';
+    }
+
+    if (
+      error.code === 'storage_read_failed' ||
+      error.code === 'storage_parse_failed'
+    ) {
+      return '保存済みアラームを読み込めませんでした。';
+    }
+  }
+
+  if (error instanceof Error) {
+    return error.message;
   }
 
   return 'アラームを更新できませんでした。';
-}
-
-function getPermissionDeniedMessage(
-  reason: 'exact_alarm_unavailable' | 'notification_permission_denied',
-): string {
-  if (reason === 'notification_permission_denied') {
-    return '通知の権限が必要です。許可してからもう一度お試しください。';
-  }
-
-  return '「アラームとリマインダー」の権限を許可してから、もう一度お試しください。';
 }
 
 function TimeWheel({
@@ -93,6 +97,7 @@ function TimeWheel({
     () => Array.from({ length: WHEEL_REPEAT_COUNT }).flatMap(() => options),
     [options],
   );
+  const listRef = useRef<FlatList<number>>(null);
   const initialIndex = WHEEL_START_REPEAT * options.length + normalizedValue;
 
   const getValueFromOffset = useCallback(
@@ -128,8 +133,31 @@ function TimeWheel({
   );
 
   const displayValue = scrollPreviewValue ?? normalizedValue;
-  const previousValue = (displayValue - 1 + options.length) % options.length;
-  const nextValue = (displayValue + 1) % options.length;
+  const centeredIndex = WHEEL_START_REPEAT * options.length + normalizedValue;
+
+  useEffect(() => {
+    if (scrollPreviewValue !== null) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      listRef.current?.scrollToIndex({
+        animated: false,
+        index: centeredIndex,
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [centeredIndex, scrollPreviewValue]);
+
+  const getCircularDistance = useCallback(
+    (itemValue: number) => {
+      const directDistance = Math.abs(itemValue - displayValue);
+
+      return Math.min(directDistance, options.length - directDistance);
+    },
+    [displayValue, options.length],
+  );
 
   return (
     <View style={styles.timeWheel}>
@@ -145,18 +173,6 @@ function TimeWheel({
       />
 
       <View style={styles.timeWheelViewport}>
-        <View pointerEvents="none" style={styles.timeWheelVisibleValues}>
-          <Text style={[styles.timeItemText, styles.timeItemTextMuted]}>
-            {formatNumber(previousValue)}
-          </Text>
-          <Text style={[styles.timeItemText, styles.timeItemTextActive]}>
-            {formatNumber(displayValue)}
-          </Text>
-          <Text style={[styles.timeItemText, styles.timeItemTextMuted]}>
-            {formatNumber(nextValue)}
-          </Text>
-        </View>
-
         <FlatList
           contentContainerStyle={styles.timeWheelContent}
           data={loopedOptions}
@@ -174,12 +190,33 @@ function TimeWheel({
           onMomentumScrollEnd={handleScrollEnd}
           onScroll={handleScroll}
           onScrollEndDrag={handleScrollEnd}
+          ref={listRef}
           removeClippedSubviews
-          renderItem={() => <View style={styles.timeItem} />}
+          renderItem={({ item }) => {
+            const itemValue = item % options.length;
+            const distance = getCircularDistance(itemValue);
+            const isActive = distance === 0;
+
+            return (
+              <View style={styles.timeItem}>
+                <Text
+                  style={[
+                    styles.timeItemText,
+                    isActive
+                      ? styles.timeItemTextActive
+                      : styles.timeItemTextMuted,
+                    distance > 1 && styles.timeItemTextHidden,
+                  ]}
+                >
+                  {formatNumber(itemValue)}
+                </Text>
+              </View>
+            );
+          }}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           snapToInterval={ITEM_HEIGHT}
-          style={[styles.timeWheelScroll, styles.timeWheelTouchLayer]}
+          style={styles.timeWheelScroll}
           windowSize={5}
         />
       </View>
@@ -284,13 +321,6 @@ export default function EditAlarmScreen() {
     setIsSaving(true);
 
     try {
-      const permissionResult = await ensureAlarmPermissions();
-
-      if (!permissionResult.granted) {
-        setErrorMessage(getPermissionDeniedMessage(permissionResult.reason));
-        return;
-      }
-
       await updateSavedAlarm(alarmId, {
         hour,
         minute,
@@ -506,24 +536,12 @@ const styles = StyleSheet.create({
   timeWheelScroll: {
     height: WHEEL_VIEWPORT_HEIGHT,
   },
-  timeWheelTouchLayer: {
-    opacity: 0,
-  },
   timeWheelViewport: {
     height: WHEEL_VIEWPORT_HEIGHT,
     justifyContent: 'center',
     overflow: 'hidden',
     position: 'relative',
     width: 96,
-  },
-  timeWheelVisibleValues: {
-    alignItems: 'center',
-    bottom: 0,
-    justifyContent: 'center',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   timeWheelContent: {
     paddingVertical: WHEEL_VERTICAL_PADDING,
@@ -545,6 +563,9 @@ const styles = StyleSheet.create({
     color: '#d4d4d4',
     fontSize: 24,
     lineHeight: 30,
+  },
+  timeItemTextHidden: {
+    opacity: 0,
   },
   timeColon: {
     color: '#d4d4d4',

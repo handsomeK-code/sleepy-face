@@ -1,8 +1,9 @@
 import { Stack, router, usePathname } from 'expo-router';
 import { useEffect } from 'react';
-import { AppRegistry, InteractionManager } from 'react-native';
+import { AppRegistry, AppState, InteractionManager } from 'react-native';
 
 import { resyncAllScheduledAlarms } from '@/services/alarm';
+import { consumePendingWakeChallengeRoute } from '@/services/android-alarm-mechanics';
 import { getCurrentUserId } from '@/services/auth';
 import { getMyProfile } from '@/services/user';
 import {
@@ -76,8 +77,60 @@ async function checkAbandonedWakeChallengeAttempt(
   });
 }
 
+async function routePendingWakeChallengeIfReady(
+  isStillActive: () => boolean,
+): Promise<boolean> {
+  const authUserId = await getCurrentUserId();
+
+  if (!isStillActive() || !authUserId) {
+    return false;
+  }
+
+  const profile = await getMyProfile();
+
+  if (!isStillActive() || !profile) {
+    return false;
+  }
+
+  const pendingWakeChallenge = await consumePendingWakeChallengeRoute().catch(
+    () => null,
+  );
+
+  if (!isStillActive() || !pendingWakeChallenge) {
+    return false;
+  }
+
+  router.replace({
+    pathname: '/face-check',
+    params: {
+      alarmId: pendingWakeChallenge.alarmId,
+      badPhotoAttempts: '0',
+      startedAt: pendingWakeChallenge.startedAt,
+    },
+  });
+
+  return true;
+}
+
 export default function RootLayout() {
   const pathname = usePathname();
+
+  useEffect(() => {
+    let isActive = true;
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') {
+        return;
+      }
+
+      routePendingWakeChallengeIfReady(() => isActive).catch(() => {});
+    });
+
+    return () => {
+      isActive = false;
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -118,6 +171,25 @@ export default function RootLayout() {
           router.replace('/profile-setup');
         }
 
+        return;
+      }
+
+      const pendingWakeChallenge =
+        await consumePendingWakeChallengeRoute().catch(() => null);
+
+      if (!isActive) {
+        return;
+      }
+
+      if (pendingWakeChallenge) {
+        router.replace({
+          pathname: '/face-check',
+          params: {
+            alarmId: pendingWakeChallenge.alarmId,
+            badPhotoAttempts: '0',
+            startedAt: pendingWakeChallenge.startedAt,
+          },
+        });
         return;
       }
 

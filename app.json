@@ -16,6 +16,13 @@
       "predictiveBackGestureEnabled": false,
       "permissions": ["android.permission.CAMERA"]
     },
+    "ios": {
+      "bundleIdentifier": "com.team5.sleepyface",
+      "deploymentTarget": "26.0",
+      "infoPlist": {
+        "NSAlarmKitUsageDescription": "眠そうな顔が起床確認用のアラームを設定するために使用します。"
+      }
+    },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
