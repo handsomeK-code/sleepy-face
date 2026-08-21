@@ -590,6 +590,45 @@ describe('Saved Alarm service', () => {
     expect(alarmMechanicsMocks.cancelAlarmOccurrence).not.toHaveBeenCalled();
   });
 
+  it('BUG: deleting and recreating a fired Saved Alarm no longer bypasses the one-per-day skip', async () => {
+    const store = new Map<string, string>([
+      [
+        'sleepy-face:saved-alarms',
+        JSON.stringify([storedAlarm({ lastFiredLocalDay: null })]),
+      ],
+    ]);
+    mocks.getItem.mockImplementation(
+      async (key: string) => store.get(key) ?? null,
+    );
+    mocks.setItem.mockImplementation(async (key: string, value: string) => {
+      store.set(key, value);
+    });
+    mocks.removeItem.mockImplementation(async (key: string) => {
+      store.delete(key);
+    });
+
+    vi.setSystemTime(new Date('2026-08-17T07:30:00.000Z'));
+    const now = new Date('2026-08-17T07:30:00.000Z');
+
+    // The alarm rings and the user starts (and presumably finishes) today's attempt.
+    const fired = await recordSavedAlarmFired('alarm-1', now);
+    expect(alarmWillSkipToday(fired!, now)).toBe(true);
+
+    // User deletes the alarm and recreates an identical one later the same day.
+    await deleteSavedAlarm('alarm-1');
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(
+      '00000000-0000-4000-8000-000000000099',
+    );
+    const recreated = await createSavedAlarm({
+      hour: fired!.hour,
+      minute: fired!.minute,
+      weekdays: fired!.weekdays,
+    });
+
+    // The one-Daily-Alarm-Attempt-per-day limit must survive delete+recreate.
+    expect(alarmWillSkipToday(recreated, now)).toBe(true);
+  });
+
   it('resyncs remaining Saved Alarms even when one fails to schedule', async () => {
     mocks.getItem.mockResolvedValue(
       JSON.stringify([
