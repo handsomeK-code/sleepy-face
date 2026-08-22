@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -71,6 +71,9 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDevMode, setIsDevMode] = useState(false);
+  // A pure in-flight guard for handleToggleReaction — never read by JSX/styles, so a
+  // ref avoids an extra re-render on every reaction tap that useState would cause.
+  const pendingReactionPhotoIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let isActive = true;
@@ -147,7 +150,15 @@ export default function HomeScreen() {
 
   const handleToggleReaction = useCallback(
     async (item: FriendsFeedItem) => {
+      // A photo already has a toggle in flight — ignore the tap rather than let a
+      // second add/remove request race the first and leave the feed out of sync.
+      if (pendingReactionPhotoIds.current.has(item.photoId)) {
+        return;
+      }
+
       const nextHasReacted = !item.viewerHasReacted;
+
+      pendingReactionPhotoIds.current.add(item.photoId);
 
       // Optimistic: the feed should feel instant, and a failure reverts to the exact
       // prior state rather than a fresh refetch.
@@ -161,6 +172,8 @@ export default function HomeScreen() {
         }
       } catch {
         applyReactionState(item.photoId, item.viewerHasReacted);
+      } finally {
+        pendingReactionPhotoIds.current.delete(item.photoId);
       }
     },
     [applyReactionState],
