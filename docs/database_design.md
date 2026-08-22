@@ -97,6 +97,24 @@ Rules:
 - The current policy allows a user to insert relations only from their own Profile.
 - The current policy allows a user to read relations where they are either side of the relation.
 
+### photo_reactions
+
+A single 😂 reaction a Profile can toggle on a friend's photo from the Home feed. Not a
+multi-emoji picker, and not the Comments feature (table design owned separately).
+
+| column name  | type        | constraints / memo                          |
+| ------------ | ----------- | -------------------------------------------- |
+| `id`         | uuid        | primary key, default `gen_random_uuid()`     |
+| `photo_id`   | uuid        | references `photos(id)`                      |
+| `profile_id` | uuid        | references `profiles(id)`                    |
+| `created_at` | timestamptz | default `now()`                              |
+
+Rules:
+
+- `(photo_id, profile_id)` is unique — one reaction per Profile per photo; removing it is a delete, not a second reaction type.
+- Authenticated users can read all reaction rows (needed to render counts on friends' photos).
+- A user can insert or delete only their own reaction rows (`profile_id = auth.uid()`).
+
 ## RPC Functions
 
 ### create_profile
@@ -143,6 +161,7 @@ Current RLS policies:
 - Authenticated users can read and insert only their own photo records.
 - Authenticated users can read friend relation rows where they are either side.
 - Authenticated users can insert friend relation rows only from their own Profile.
+- Authenticated users can read all photo reaction rows, and insert/delete only their own.
 
 ## Deferred Backend Tables
 

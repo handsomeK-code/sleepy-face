@@ -59,3 +59,19 @@ a direct `update` from writing a full `https://` URL there:
 In the app, open 設定 (Profile) → 写真を選ぶ → pick a photo → crop → confirm. It should
 save without the "写真をアップロードできませんでした" error, and the picked photo should
 show as the avatar (persists after closing and reopening the screen).
+
+## Photo Reactions (2026-08-22)
+
+Lets a viewer react to a friend's photo in the Home feed with a single 😂 (a toggle, not
+a multi-emoji picker). Comments are a separate feature and are not part of this.
+
+1. Open the SQL Editor: https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/sql/new
+2. Open `sql/2026-08-22_photo_reactions.sql` in this repo, copy its full contents, paste
+   into the SQL Editor, and click **Run**. It should finish with "Success. No rows
+   returned". This creates the `photo_reactions` table and its RLS policies.
+3. Verify: **Table Editor** in the left sidebar
+   (https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/editor) should now list a
+   `photo_reactions` table.
+4. Confirm it works end-to-end: in the app, open ホーム and tap the 😂 button under a
+   friend's photo. The count should increment immediately and persist after a pull-to-
+   refresh; tapping again should remove it.
