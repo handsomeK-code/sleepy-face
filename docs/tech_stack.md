@@ -6,6 +6,8 @@ This document records the current and planned technical stack for the MVP.
 
 It separates dependencies already installed in the app from dependencies required by the MVP but not yet installed.
 
+Current behavior and platform limits are documented in [`current_implementation_spec.md`](./current_implementation_spec.md).
+
 ## Current App
 
 Current app type:
@@ -23,8 +25,10 @@ From `package.json`:
 
 | dependency | version | purpose |
 | --- | --- | --- |
-| `@supabase/supabase-js` | `^2.112.3` | Supabase Auth, Postgres reads, RPC calls, Storage upload/signed URL |
+| `@react-native-async-storage/async-storage` | `2.2.0` | Device-local Saved Alarms, attempt/access day markers, active Wake Challenge record, and Dev Mode |
+| `@supabase/supabase-js` | `^2.112.3` | Supabase Auth, Postgres reads/writes, RPC calls, Storage upload/public URL |
 | `expo` | `~57.0.12` | Expo app runtime |
+| `expo-audio` | `~57.0.4` | In-app preview of bundled custom Alarm Sounds |
 | `expo-camera` | `^57.0.3` | Photo Capture during Wake Up Challenge |
 | `react` | `19.2.3` | React runtime |
 | `react-native` | `0.86.2` | Native app framework |
@@ -37,7 +41,9 @@ From `package.json`:
 | `expo-font` | `~57.0.1` | Font loading |
 | `expo-glass-effect` | `~57.0.1` | Expo glass effect UI support |
 | `expo-image` | `~57.0.2` | Image rendering |
+| `expo-image-picker` | `~57.0.12` | Custom Profile Icon selection and square crop |
 | `expo-linking` | `~57.0.5` | Deep linking |
+| `expo-notifications` | `~57.0.13` | Notification permission and Expo Push Token registration |
 | `expo-secure-store` | `~57.0.1` | Secure persisted Supabase Auth session storage |
 | `expo-splash-screen` | `~57.0.6` | Splash screen |
 | `expo-status-bar` | `~57.0.1` | Status bar |
@@ -75,16 +81,21 @@ Android Alarm Mechanics use a local Expo native module in Kotlin for Android-onl
 
 Android Face Proof uses a local Expo native module in Kotlin with Google ML Kit face detection for on-device face presence checks. This requires a rebuilt native Android app and is not supported in Expo Go.
 
+The native Alarm and Face Proof capabilities are also unavailable on iOS and web. Their screens may render, but Alarm creation/scheduling and successful Face Proof require the Android module.
+
 ## Backend Platform
 
 The MVP backend is Supabase:
 
 - Supabase Auth for Google Login
 - Supabase Postgres for current Profile, photo, and friend relation state
+- Supabase Postgres for reactions, comments, and Push Tokens
+- Supabase Storage for failure photos and custom Profile Icon photos
 - Supabase Row Level Security for user data access
 - Supabase RPC functions for shared business rules, starting with Profile creation
+- A Deno Edge Function for optional Expo Push delivery after an externally configured `photos` INSERT Webhook
 
-The current app can upload captured failure photos to Supabase Storage and insert simple `photos` records. The Quiz Question service is client-side service logic for generating two-digit arithmetic questions, checking string answers, and recording current-schema quiz-failure photo records. Wake Up Challenge attempt persistence, final Failure Card tables, final Failure Card-specific Storage policy design, and Friends Feed Access persistence are deferred backend work.
+The current app uploads a captured photo only when the Quiz times out, then inserts a simple `photos` record. The Friends Feed reads Friend `photos` and joins Profile, reaction, and comment data on the client. `daily_attempts`, structured `failure_cards`, and server-enforced/account-scoped Friends Feed Access remain deferred backend work.
 
 The frontend should use the Supabase client directly for simple Auth and reads. It should use RPC functions when the backend must enforce consistent rules.
 
@@ -92,17 +103,19 @@ Google Login uses Supabase OAuth-only for the MVP. The Expo app opens the Supaba
 
 ## Local Device Storage
 
-Saved Alarms stay local to the device.
+Saved Alarms, Wake Challenge Attempt state, and Friends Feed Access state stay local to the device.
 
-Local storage should hold:
+Current `AsyncStorage` data includes:
 
-- Saved Alarm time
-- Selected weekdays
-- Saved Alarm ON/OFF state
-- Local saved alarm ID
-- Active Daily Alarm Attempt state while the challenge is running
+- `sleepy-face:saved-alarms`: time, weekdays, ON/OFF, Alarm Sound, last-fired day, local ID, and timestamps
+- `sleepy-face:last-alarm-attempt-local-day`: device-wide last Daily Alarm local day
+- `sleepy-face:wake-challenge-attempt`: active Alarm ID, local day, and start time
+- `sleepy-face:friends-feed-access-block`: blocked local day
+- `sleepy-face:dev-mode`: development feature flag
 
-Saved Alarms use `@react-native-async-storage/async-storage` for MVP local key-value persistence. Saved Alarms include an `isEnabled` field; older stored alarms without this field are read as enabled. Active Daily Alarm Attempt state and native ringing mechanics are later slices and may use a different local persistence mechanism if needed.
+These keys are device-wide and are not namespaced by authenticated Profile. Saved Alarms include an `isEnabled` field; older stored alarms without this field are read as enabled. The active Alarm Timer and Quiz session remain JavaScript in-memory state, while captured photos are copied to the app document directory.
+
+Native ringing mechanics are implemented in the local `modules/alarm-ringing/` Expo Module. Enabled Saved Alarms are re-registered after Android boot through a Headless JS task.
 
 Supabase should not store Saved Alarm schedules in the MVP unless the product scope changes.
 
@@ -116,7 +129,12 @@ From `package.json`:
 | `android` | `expo run:android` |
 | `ios` | `expo run:ios` |
 | `web` | `expo start --web` |
-| `lint` | `expo lint --max-warnings=0` |
+| `lint` | `expo lint --max-warnings=0 -- --no-warn-ignored` |
+| `lint:fix` | `expo lint --fix` |
+| `test` | `vitest run` |
+| `format` | `prettier --write .` |
+| `format:check` | `prettier --check .` |
+| `prepare` | `husky` |
 | `reset-project` | `node ./scripts/reset-project.js` |
 
 ## Expo Version Rule

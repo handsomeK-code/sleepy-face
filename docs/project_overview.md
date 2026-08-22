@@ -4,6 +4,8 @@
 
 The Wake Up Challenge App is a university MVP project focused on helping users wake up and stay awake.
 
+This document explains the product direction. For the behavior currently present in the repository, including implementation gaps and platform constraints, see [`current_implementation_spec.md`](./current_implementation_spec.md). The target scope remains in [`mvp_scope.md`](./mvp_scope.md).
+
 A normal alarm is easy to stop passively. This project adds a required Wake Up Challenge after the alarm rings so the user must take active steps before the alarm experience is considered complete.
 
 ## Product Aim
@@ -50,4 +52,3 @@ The current project direction is to focus on the essential wake-up experience, k
 The product design is not finished yet.
 
 For now, project documentation should not define detailed UI layout, visual style, navigation design, screen composition, or component-level interaction design. Those design decisions should be documented separately after the design direction is ready.
-
