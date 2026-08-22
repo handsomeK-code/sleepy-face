@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
 import { FeedLoadingSkeleton } from '@/components/loading-skeletons';
-import { PROFILE_ICON_SOURCES } from '@/constants/profile-icons';
+import { getProfileIconSource } from '@/constants/profile-icons';
 import { getDevMode, setDevMode } from '@/services/dev-mode';
 import {
   clearFriendsFeedAccessBlock,
@@ -146,7 +146,7 @@ export default function HomeScreen() {
         <View style={styles.avatar}>
           <Image
             contentFit="cover"
-            source={PROFILE_ICON_SOURCES[item.iconId]}
+            source={getProfileIconSource(item.iconId)}
             style={styles.avatarImage}
           />
         </View>

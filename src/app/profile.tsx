@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
@@ -17,11 +18,16 @@ import { BottomNav } from '@/components/bottom-nav';
 import { LoadingButtonContent } from '@/components/loading';
 import { ProfileLoadingSkeleton } from '@/components/loading-skeletons';
 import {
+  getProfileIconSource,
   PROFILE_ICON_LABELS,
   PROFILE_ICON_SOURCES,
 } from '@/constants/profile-icons';
 import { signOut } from '@/services/auth';
 import { getDevMode, setDevMode } from '@/services/dev-mode';
+import {
+  getProfileIconPhotoPickErrorMessage,
+  pickAndUploadProfileIconPhoto,
+} from '@/services/profile-icon-photo';
 import {
   ProfilePhotosServiceError,
   listMyFailurePhotos,
@@ -34,7 +40,6 @@ import {
   updateProfile,
   validateProfileUpdateInput,
   type Profile,
-  type ProfileIconId,
   type ProfileUpdateValidationErrorCode,
 } from '@/services/user';
 
@@ -88,7 +93,8 @@ function formatPhotoDate(isoDate: string): string {
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
-  const [iconId, setIconId] = useState<ProfileIconId>('human');
+  const [iconId, setIconId] = useState('human');
+  const [isPickingPhoto, setIsPickingPhoto] = useState(false);
   const [photos, setPhotos] = useState<MyFailurePhoto[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -177,6 +183,29 @@ export default function ProfileScreen() {
     }
   }, [displayName, iconId]);
 
+  const handlePickPhoto = useCallback(async () => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setIsPickingPhoto(true);
+
+    try {
+      const result = await pickAndUploadProfileIconPhoto();
+
+      if (result.status === 'success') {
+        setIconId(result.url);
+        return;
+      }
+
+      const message = getProfileIconPhotoPickErrorMessage(result);
+
+      if (message) {
+        setErrorMessage(message);
+      }
+    } finally {
+      setIsPickingPhoto(false);
+    }
+  }, []);
+
   const handleEnableDevMode = useCallback(async () => {
     await setDevMode(true);
     setIsDevMode(true);
@@ -248,10 +277,28 @@ export default function ProfileScreen() {
                     <View style={styles.avatarPreview}>
                       <Image
                         contentFit="cover"
-                        source={PROFILE_ICON_SOURCES[iconId]}
+                        source={getProfileIconSource(iconId)}
                         style={styles.avatarPreviewImage}
                       />
                     </View>
+
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={isSaving || isPickingPhoto}
+                      onPress={handlePickPhoto}
+                      style={({ pressed }) => [
+                        styles.pickPhotoButton,
+                        pressed && styles.buttonPressed,
+                      ]}
+                    >
+                      {isPickingPhoto ? (
+                        <ActivityIndicator color="#171717" size="small" />
+                      ) : (
+                        <Text style={styles.pickPhotoButtonText}>
+                          写真を選ぶ
+                        </Text>
+                      )}
+                    </Pressable>
 
                     <View style={styles.iconGrid}>
                       {PROFILE_ICON_IDS.map((id) => {
@@ -441,6 +488,21 @@ const styles = StyleSheet.create({
   avatarPreviewImage: {
     height: '100%',
     width: '100%',
+  },
+  pickPhotoButton: {
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 16,
+  },
+  pickPhotoButtonText: {
+    color: '#171717',
+    fontSize: 13,
+    fontWeight: '700',
   },
   iconGrid: {
     flexDirection: 'row',

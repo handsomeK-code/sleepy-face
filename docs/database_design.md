@@ -14,10 +14,11 @@ The current online Supabase setup is intentionally smaller than the full product
 - Use `profiles` for app profile data tied one-to-one to `auth.users`.
 - Use `display_name` in code and docs instead of `username`.
 - Keep `user_id` as the public immutable User ID for Friend Search.
-- Keep `icon_url` as the profile icon field; it stores one of the 8 known preset icon identifiers (`human`, `man`, `man2`, `woman`, `boy`, `child`, `old-man`, `grandmother`) chosen during Initial Setup, not an arbitrary uploaded image URL.
+- Keep `icon_url` as the profile icon field; it stores either one of the 8 known preset icon identifiers (`human`, `man`, `man2`, `woman`, `boy`, `child`, `old-man`, `grandmother`) chosen during Initial Setup, or a custom photo's full Storage URL chosen from the photo library (both during Initial Setup and from the Profile screen). `create_profile` still only accepts a preset identifier; a custom photo is written afterward through a direct `profiles` update.
 - Use simple `photos` records for uploaded image URLs in the current schema.
 - Use `friends_relations` for directional friend relation rows in the current schema.
 - Use Supabase Storage bucket `failure-photos` for the current simple captured-photo upload flow.
+- Use Supabase Storage bucket `profile-icon-photos` for custom profile icon photo uploads.
 - Defer `daily_attempts`, `failure_cards`, canonical `friendships`, feed access persistence, and final Failure Card-specific storage rules until the Wake Up Challenge backend is implemented.
 
 ## Tables
@@ -31,7 +32,7 @@ One row per authenticated app user. The row ID is the Auth User ID from Supabase
 | `id`         | uuid        | primary key, references `auth.users(id)`               |
 | `user_id`    | varchar     | unique public User ID used for Friend Search           |
 | `display_name` | varchar  | required public Display Name                           |
-| `icon_url`   | varchar     | required preset Profile Icon identifier (not a URL)    |
+| `icon_url`   | varchar     | required; a preset Profile Icon identifier or a custom photo's Storage URL |
 | `created_at` | timestamptz | default `now()`                                        |
 
 Rules:
@@ -67,6 +68,16 @@ Rules:
 - Captured photos are uploaded under a path scoped by the current Auth User ID.
 - The app stores the public URL in `photos.image_url`.
 - This bucket supports the current simple photo records and is not yet the final Failure Card storage model.
+
+### profile-icon-photos Storage
+
+Storage bucket used by the custom profile icon photo picker (Initial Setup and the Profile screen).
+
+Rules:
+
+- Uploaded under a path scoped by the current Auth User ID (`{profileId}/icon.jpg`, upserted on re-pick).
+- The app stores the public URL directly in `profiles.icon_url`.
+- Publicly readable, same as `failure-photos`, since friends need to see it in the feed and Friend Search.
 
 ### friends_relations
 

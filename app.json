@@ -38,6 +38,12 @@
           "cameraPermission": "眠そうな顔が起床確認用の写真を撮影するためにカメラを使用します。",
           "recordAudioAndroid": false
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "プロフィールアイコンに設定する写真を選ぶために写真ライブラリを使用します。"
+        }
       ]
     ],
     "experiments": {
