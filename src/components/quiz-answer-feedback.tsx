@@ -14,7 +14,7 @@ import {
 } from '@/services/quiz-answer-feedback';
 
 const correctAnswerSound = require('../../assets/sounds/quiz-correct.wav');
-const incorrectAnswerSound = require('../../assets/sounds/quiz-incorrect.wav');
+const incorrectAnswerSound = require('../../assets/sounds/quiz-incorrect.mp3');
 
 type QuizAnswerFeedbackContextValue = {
   playCorrectAnswerFeedback: () => void;
