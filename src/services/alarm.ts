@@ -1,6 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
+  isAlarmSoundId,
+  toAlarmSoundId,
+  type AlarmSoundId,
+} from '@/constants/alarm-sounds';
+
+import {
   cancelAlarmOccurrence,
   scheduleAlarmOccurrence,
 } from './android-alarm-mechanics';
@@ -20,6 +26,7 @@ export type SavedAlarm = {
   minute: number;
   weekdays: Weekday[];
   isEnabled: boolean;
+  soundId: AlarmSoundId;
   lastFiredLocalDay: string | null;
   createdAt: string;
   updatedAt: string;
@@ -29,6 +36,7 @@ export type SaveAlarmInput = {
   hour: number;
   minute: number;
   weekdays: number[];
+  soundId: string;
 };
 
 export type AlarmServiceErrorCode =
@@ -52,6 +60,7 @@ type StoredAlarmRow = {
   minute: unknown;
   weekdays: unknown;
   isEnabled?: unknown;
+  soundId?: unknown;
   lastFiredLocalDay?: unknown;
   createdAt: unknown;
   updatedAt: unknown;
@@ -116,6 +125,7 @@ function validateAlarmInput(input: SaveAlarmInput): {
   hour: number;
   minute: number;
   weekdays: Weekday[];
+  soundId: AlarmSoundId;
 } {
   if (!isValidTimePart(input.hour, 0, 23)) {
     throw new AlarmServiceError(
@@ -138,9 +148,17 @@ function validateAlarmInput(input: SaveAlarmInput): {
     );
   }
 
+  if (!isAlarmSoundId(input.soundId)) {
+    throw new AlarmServiceError(
+      'invalid_alarm_input',
+      'Saved Alarm sound must be a known Alarm Sound identifier.',
+    );
+  }
+
   return {
     hour: input.hour,
     minute: input.minute,
+    soundId: input.soundId,
     weekdays: normalizeWeekdays(input.weekdays, 'invalid_alarm_input'),
   };
 }
@@ -185,6 +203,11 @@ function mapStoredAlarm(value: unknown): SavedAlarm {
     lastFiredLocalDay:
       typeof row.lastFiredLocalDay === 'string' ? row.lastFiredLocalDay : null,
     minute: row.minute as number,
+    // Older local alarms saved before this option existed are treated as the default
+    // sound, same fallback as an unrecognized id.
+    soundId: toAlarmSoundId(
+      typeof row.soundId === 'string' ? row.soundId : null,
+    ),
     updatedAt: row.updatedAt,
     weekdays: normalizeWeekdays(row.weekdays, 'storage_parse_failed'),
   };
@@ -363,7 +386,11 @@ async function syncScheduledAlarm(alarm: SavedAlarm): Promise<void> {
     }
 
     const nextOccurrence = getNextAlarmOccurrence(alarm);
-    await scheduleAlarmOccurrence(alarm.id, nextOccurrence.getTime());
+    await scheduleAlarmOccurrence(
+      alarm.id,
+      nextOccurrence.getTime(),
+      alarm.soundId,
+    );
   } catch (error) {
     throw new AlarmServiceError(
       'alarm_scheduling_failed',
@@ -425,6 +452,7 @@ export async function createSavedAlarm(
         ? lastAlarmAttemptLocalDay
         : null,
     minute: validatedInput.minute,
+    soundId: validatedInput.soundId,
     updatedAt: now,
     weekdays: validatedInput.weekdays,
   };
@@ -457,6 +485,7 @@ export async function updateSavedAlarm(
     ...targetAlarm,
     hour: validatedInput.hour,
     minute: validatedInput.minute,
+    soundId: validatedInput.soundId,
     updatedAt: new Date().toISOString(),
     weekdays: validatedInput.weekdays,
   };

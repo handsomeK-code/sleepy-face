@@ -14,6 +14,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LoadingButtonContent } from '@/components/loading';
+import {
+  ALARM_SOUND_IDS,
+  ALARM_SOUND_LABELS,
+  DEFAULT_ALARM_SOUND_ID,
+  type AlarmSoundId,
+} from '@/constants/alarm-sounds';
 import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
@@ -199,6 +205,7 @@ export default function AddAlarmScreen() {
   const [selectedWeekdays, setSelectedWeekdays] = useState<Weekday[]>([
     1, 2, 3, 4, 5,
   ]);
+  const [soundId, setSoundId] = useState<AlarmSoundId>(DEFAULT_ALARM_SOUND_ID);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -231,6 +238,7 @@ export default function AddAlarmScreen() {
       await createSavedAlarm({
         hour,
         minute,
+        soundId,
         weekdays: selectedWeekdays,
       });
       router.replace('/alarms');
@@ -239,7 +247,7 @@ export default function AddAlarmScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [hour, minute, selectedWeekdays]);
+  }, [hour, minute, selectedWeekdays, soundId]);
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
@@ -295,6 +303,37 @@ export default function AddAlarmScreen() {
                       ]}
                     >
                       {weekday.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.soundSection}>
+            <Text style={styles.weekdayTitle}>アラーム音</Text>
+            <View style={styles.soundList}>
+              {ALARM_SOUND_IDS.map((id) => {
+                const isSelected = id === soundId;
+
+                return (
+                  <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isSelected }}
+                    key={id}
+                    onPress={() => setSoundId(id)}
+                    style={[
+                      styles.soundOption,
+                      isSelected && styles.soundOptionSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.soundOptionText,
+                        isSelected && styles.soundOptionTextSelected,
+                      ]}
+                    >
+                      {ALARM_SOUND_LABELS[id]}
                     </Text>
                   </Pressable>
                 );
@@ -469,6 +508,35 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   weekdayTextSelected: {
+    color: '#ffffff',
+  },
+  soundSection: {
+    paddingHorizontal: 40,
+    paddingTop: 32,
+  },
+  soundList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+  },
+  soundOption: {
+    borderColor: '#e5e5e5',
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  soundOptionSelected: {
+    backgroundColor: '#171717',
+    borderColor: '#171717',
+  },
+  soundOptionText: {
+    color: '#a3a3a3',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  soundOptionTextSelected: {
     color: '#ffffff',
   },
   errorText: {
