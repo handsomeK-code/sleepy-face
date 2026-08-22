@@ -83,51 +83,79 @@ class AlarmRingingService : Service() {
     else -> null
   }
 
+  // On some OEM builds (observed on Samsung One UI), RingtoneManager.getDefaultUri()
+  // internally triggers a lazy write to Settings.System the first time it resolves the
+  // default alarm/notification tone, which throws SecurityException without WRITE_SETTINGS
+  // (an app should never need that permission just to read a tone). resolveAlarmToneUri()
+  // already sidesteps that specific path, but the device's ringtone database can still be
+  // empty or otherwise fail to resolve/play on a given OEM build. Rather than let that leave
+  // the alarm silent (the previous behavior), always fall back to a bundled sound resource
+  // as a last resort -- the alarm's actual purpose (make noise) must never depend on the
+  // device's system ringtone state being usable.
   private fun playAlarmTone(soundId: String?) {
     stopDefaultAlarmTone()
 
     val customSoundResId = resourceIdForSound(soundId)
+
+    val player = if (customSoundResId != null) {
+      tryPlayFromResource(customSoundResId)
+    } else {
+      resolveAlarmToneUri()?.let { tryPlayFromUri(it) }
+    }
+
+    mediaPlayer = player ?: run {
+      Log.e(
+        LOG_TAG,
+        "Could not resolve or play a system alarm tone (soundId=$soundId); " +
+          "falling back to the bundled default.",
+      )
+      tryPlayFromResource(R.raw.classic_beep)
+    }
+
+    if (mediaPlayer == null) {
+      Log.e(LOG_TAG, "Bundled fallback alarm tone also failed to play; ringing silently.")
+    }
+  }
+
+  private fun buildAlarmAudioAttributes(): AudioAttributes =
+    AudioAttributes.Builder()
+      .setUsage(AudioAttributes.USAGE_ALARM)
+      .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+      .build()
+
+  private fun tryPlayFromResource(resId: Int): MediaPlayer? {
     val player = MediaPlayer()
 
-    try {
-      player.setAudioAttributes(
-        AudioAttributes.Builder()
-          .setUsage(AudioAttributes.USAGE_ALARM)
-          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-          .build(),
-      )
-
-      if (customSoundResId != null) {
-        val descriptor = resources.openRawResourceFd(customSoundResId)
-        descriptor.use {
-          player.setDataSource(it.fileDescriptor, it.startOffset, it.length)
-        }
-      } else {
-        // On some OEM builds (observed on Samsung One UI), RingtoneManager.getDefaultUri()
-        // internally triggers a lazy write to Settings.System the first time it resolves
-        // the default alarm/notification tone, which throws SecurityException without
-        // WRITE_SETTINGS (an app should never need to hold that permission just to read a
-        // default tone). Guard every step so a tone-resolution/playback failure silences
-        // the alarm sound instead of crashing the whole ringing service.
-        val alarmToneUri = resolveAlarmToneUri()
-
-        if (alarmToneUri == null) {
-          Log.e(LOG_TAG, "No alarm tone URI could be resolved; ringing silently.")
-          player.release()
-          return
-        }
-
-        player.setDataSource(applicationContext, alarmToneUri)
+    return try {
+      player.setAudioAttributes(buildAlarmAudioAttributes())
+      resources.openRawResourceFd(resId).use {
+        player.setDataSource(it.fileDescriptor, it.startOffset, it.length)
       }
-
       player.isLooping = true
       player.prepare()
       player.start()
-      mediaPlayer = player
+      player
     } catch (error: Exception) {
-      Log.e(LOG_TAG, "Failed to play alarm tone (soundId=$soundId); ringing silently.", error)
+      Log.e(LOG_TAG, "Failed to play bundled alarm tone resource $resId", error)
       player.release()
-      mediaPlayer = null
+      null
+    }
+  }
+
+  private fun tryPlayFromUri(uri: Uri): MediaPlayer? {
+    val player = MediaPlayer()
+
+    return try {
+      player.setAudioAttributes(buildAlarmAudioAttributes())
+      player.setDataSource(applicationContext, uri)
+      player.isLooping = true
+      player.prepare()
+      player.start()
+      player
+    } catch (error: Exception) {
+      Log.e(LOG_TAG, "Failed to play alarm tone from uri $uri", error)
+      player.release()
+      null
     }
   }
 
