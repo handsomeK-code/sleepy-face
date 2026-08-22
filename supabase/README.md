@@ -1,39 +1,27 @@
-# Supabase: manual schema changes
+# Supabase: 手動でのスキーマ変更
 
-This repo does not run `supabase db push` or manage a linked Supabase project (see
-`docs/database_design.md`: the schema is applied manually). The files under `sql/` are
-the source of truth for that manual setup, but someone with access to the Supabase
-project must apply them — none of these steps run from app code.
+このリポジトリは `supabase db push` を実行しておらず、Supabaseプロジェクトとリンクした管理もしていません（`docs/database_design.md`参照：スキーマは手動で適用します）。`sql/`配下のファイルがその手動セットアップの正本ですが、Supabaseプロジェクトにアクセスできる人が適用する必要があります — これらの手順はアプリのコードからは実行されません。
 
-## Profile Icon Photos (2026-08-21)
+## プロフィールアイコン写真機能（2026-08-21）
 
-Lets a user set a custom photo (instead of one of the 8 preset icons) as their profile
-icon, both during Initial Setup and from the Profile screen.
+初回登録画面・設定画面の両方で、8種類のプリセットアイコンの代わりに好きな写真をプロフィールアイコンに設定できるようにする機能です。
 
-Project: `sleepy-face`, ref `mgtxrvwgezcqupgjuxzq`.
+対象プロジェクト: `sleepy-face`（ref: `mgtxrvwgezcqupgjuxzq`）
 
-### 1. Create the Storage bucket + policies
+### 1. Storageバケットとポリシーを作成する
 
-1. Open the SQL Editor: https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/sql/new
-2. Open `sql/2026-08-21_profile_icon_photos_bucket.sql` in this repo, copy its full
-   contents, paste into the SQL Editor.
-3. Click **Run** (or Cmd/Ctrl+Enter). It should finish with "Success. No rows returned".
-4. Verify: go to **Storage** in the left sidebar
-   (https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/storage/buckets) — a
-   `profile-icon-photos` bucket should now be listed, marked **Public**.
+1. SQLエディタを開く: https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/sql/new
+2. このリポジトリの `sql/2026-08-21_profile_icon_photos_bucket.sql` を開き、中身を全部コピーしてSQLエディタに貼り付ける
+3. **Run**（またはCmd/Ctrl+Enter）をクリック。「Success. No rows returned」と出れば成功
+4. 確認: 左サイドバーの **Storage** を開く（https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/storage/buckets ） → `profile-icon-photos` というバケットが**Public**として表示されていればOK
 
-If it errors with `policy already exists` (e.g. you're re-running after a partial
-failure), that one `create policy` statement already applied — drop it first
-(`drop policy "<name>" on storage.objects;`) or comment out the line and re-run.
+もし `policy already exists`（ポリシーが既に存在する）というエラーが出た場合（例えば途中で失敗して再実行した時など）は、その`create policy`の1文だけ既に反映済みという意味です。先に `drop policy "<ポリシー名>" on storage.objects;` で削除するか、該当行をコメントアウトしてから再実行してください。
 
-### 2. Check for a constraint blocking custom photo URLs
+### 2. カスタム写真のURLをブロックする制約がないか確認する
 
-`profiles.icon_url` is documented as "one of 8 preset identifiers", but that may only be
-enforced by the `create_profile` RPC (which the client still calls with only a preset
-value) rather than by the column itself. Confirm there's no separate constraint blocking
-a direct `update` from writing a full `https://` URL there:
+`profiles.icon_url` は「8種類のプリセット識別子のいずれか」というドキュメント上の想定になっていますが、これは`create_profile` RPC側だけで強制されている可能性があり（クライアントは今もプリセット値でしかこのRPCを呼びません）、カラム自体には制約がないかもしれません。直接`update`で `https://` のフルURLを書き込めるかどうか、以下で確認してください:
 
-1. In the same SQL Editor, run:
+1. 同じSQLエディタで以下を実行:
    ```sql
    select conname, pg_get_constraintdef(oid)
    from pg_constraint
@@ -43,52 +31,32 @@ a direct `update` from writing a full `https://` URL there:
    from pg_trigger
    where tgrelid = 'public.profiles'::regclass and not tgisinternal;
    ```
-2. If either query returns something that restricts `icon_url` to the 8 preset values
-   (e.g. a `CHECK (icon_url IN (...))` constraint, or a trigger validating it), drop it:
+2. もしどちらかの結果で、`icon_url`を8種類のプリセット値に制限するようなもの（例: `CHECK (icon_url IN (...))` 制約や、それを検証するトリガー）が出てきたら削除する:
    ```sql
-   alter table public.profiles drop constraint <the_constraint_name>;
-   -- or
-   drop trigger <the_trigger_name> on public.profiles;
+   alter table public.profiles drop constraint <制約名>;
+   -- または
+   drop trigger <トリガー名> on public.profiles;
    ```
-3. If both queries return no rows (most likely — the codebase's existing
-   `updateProfile()` already free-writes `icon_url` for the 8 presets with no DB-side
-   validation), there's nothing to do here.
+3. 両方とも0件（何もヒットしない）なら、おそらく何もする必要はありません（既存の`updateProfile()`は8種のプリセット値をDB側の検証なしでそのまま書き込んでいるため）。
 
-### 3. Confirm it works end-to-end
+### 3. 一連の動作を確認する
 
-In the app, open 設定 (Profile) → 写真を選ぶ → pick a photo → crop → confirm. It should
-save without the "写真をアップロードできませんでした" error, and the picked photo should
-show as the avatar (persists after closing and reopening the screen).
+アプリ内で 設定（Profile）→「写真を選ぶ」→ 写真を選択 → トリミング → 確定、と操作します。「写真をアップロードできませんでした」というエラーが出ずに保存でき、選んだ写真がアイコンとして表示されれば（画面を閉じて開き直しても残っていれば）成功です。
 
-## Photo Reactions (2026-08-22)
+## 写真へのリアクション機能（2026-08-22）
 
-Lets a viewer react to a friend's photo in the Home feed with a single 😂 (a toggle, not
-a multi-emoji picker). Comments are a separate feature and are not part of this.
+ホーム画面の友達の写真に😂で1種類だけリアクション（トグル式、複数絵文字の選択肢はなし）できるようにする機能です。
 
-1. Open the SQL Editor: https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/sql/new
-2. Open `sql/2026-08-22_photo_reactions.sql` in this repo, copy its full contents, paste
-   into the SQL Editor, and click **Run**. It should finish with "Success. No rows
-   returned". This creates the `photo_reactions` table and its RLS policies.
-3. Verify: **Table Editor** in the left sidebar
-   (https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/editor) should now list a
-   `photo_reactions` table.
-4. Confirm it works end-to-end: in the app, open ホーム and tap the 😂 button under a
-   friend's photo. The count should increment immediately and persist after a pull-to-
-   refresh; tapping again should remove it.
+1. SQLエディタを開く: https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/sql/new
+2. このリポジトリの `sql/2026-08-22_photo_reactions.sql` を開き、中身を全部コピーしてSQLエディタに貼り付け、**Run**をクリック。「Success. No rows returned」と出れば成功。これで`photo_reactions`テーブルとそのRLSポリシーが作成されます
+3. 確認: 左サイドバーの**Table Editor**（https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/editor ）を開き、`photo_reactions`テーブルが表示されていればOK
+4. 一連の動作を確認する: アプリでホーム画面を開き、友達の写真の下にある😂ボタンをタップする。数がすぐに増え、プルリフレッシュ後も残っていればOK。もう一度タップすると取り消される
 
-## Comments (2026-08-22)
+## コメント機能（2026-08-22）
 
-Lets a viewer comment on a friend's photo from the photo's detail screen (open it by
-tapping the photo or the 💬 button in the Home feed).
+ホーム画面で写真または💬ボタンをタップすると開く「投稿詳細画面」から、友達の写真にコメントできるようにする機能です。
 
-1. Open the SQL Editor: https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/sql/new
-2. Open `sql/2026-08-22_comments.sql` in this repo, copy its full contents, paste into
-   the SQL Editor, and click **Run**. It should finish with "Success. No rows returned".
-   This creates the `comments` table and its RLS policies.
-3. Verify: **Table Editor** in the left sidebar
-   (https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/editor) should now list a
-   `comments` table.
-4. Confirm it works end-to-end: in the app, open ホーム, tap a friend's photo (or the 💬
-   button) to open its detail screen, type a comment, and tap 送信. It should appear in
-   the thread immediately, and the 💬 count on the Home feed should increment after a
-   pull-to-refresh.
+1. SQLエディタを開く: https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/sql/new
+2. このリポジトリの `sql/2026-08-22_comments.sql` を開き、中身を全部コピーしてSQLエディタに貼り付け、**Run**をクリック。「Success. No rows returned」と出れば成功。これで`comments`テーブルとそのRLSポリシーが作成されます
+3. 確認: 左サイドバーの**Table Editor**（https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/editor ）を開き、`comments`テーブルが表示されていればOK
+4. 一連の動作を確認する: アプリでホーム画面を開き、友達の写真（または💬ボタン）をタップして投稿詳細画面に入り、コメントを入力して「送信」をタップする。すぐにコメント一覧に反映され、ホーム画面の💬の数もプルリフレッシュ後に増えていればOK
