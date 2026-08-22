@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -26,6 +26,10 @@ import {
   listFriendsFeed,
   type FriendsFeedItem,
 } from '@/services/home-feed';
+import {
+  addPhotoReaction,
+  removePhotoReaction,
+} from '@/services/photo-reactions';
 
 function getHomeFeedErrorMessage(error: unknown): string {
   if (error instanceof HomeFeedServiceError) {
@@ -67,6 +71,9 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDevMode, setIsDevMode] = useState(false);
+  // A pure in-flight guard for handleToggleReaction — never read by JSX/styles, so a
+  // ref avoids an extra re-render on every reaction tap that useState would cause.
+  const pendingReactionPhotoIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let isActive = true;
@@ -124,6 +131,54 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const applyReactionState = useCallback(
+    (photoId: string, hasReacted: boolean) => {
+      setFeed((currentFeed) =>
+        currentFeed.map((item) =>
+          item.photoId === photoId
+            ? {
+                ...item,
+                reactionCount: item.reactionCount + (hasReacted ? 1 : -1),
+                viewerHasReacted: hasReacted,
+              }
+            : item,
+        ),
+      );
+    },
+    [],
+  );
+
+  const handleToggleReaction = useCallback(
+    async (item: FriendsFeedItem) => {
+      // A photo already has a toggle in flight — ignore the tap rather than let a
+      // second add/remove request race the first and leave the feed out of sync.
+      if (pendingReactionPhotoIds.current.has(item.photoId)) {
+        return;
+      }
+
+      const nextHasReacted = !item.viewerHasReacted;
+
+      pendingReactionPhotoIds.current.add(item.photoId);
+
+      // Optimistic: the feed should feel instant, and a failure reverts to the exact
+      // prior state rather than a fresh refetch.
+      applyReactionState(item.photoId, nextHasReacted);
+
+      try {
+        if (nextHasReacted) {
+          await addPhotoReaction(item.photoId);
+        } else {
+          await removePhotoReaction(item.photoId);
+        }
+      } catch {
+        applyReactionState(item.photoId, item.viewerHasReacted);
+      } finally {
+        pendingReactionPhotoIds.current.delete(item.photoId);
+      }
+    },
+    [applyReactionState],
+  );
+
   const handleExitDevMode = useCallback(async () => {
     await setDevMode(false);
     setIsDevMode(false);
@@ -162,6 +217,30 @@ export default function HomeScreen() {
         source={{ uri: item.imageUrl }}
         style={styles.feedPhoto}
       />
+
+      <View style={styles.reactionRow}>
+        <Pressable
+          accessibilityLabel="😂でリアクションする"
+          accessibilityRole="button"
+          accessibilityState={{ selected: item.viewerHasReacted }}
+          onPress={() => handleToggleReaction(item)}
+          style={({ pressed }) => [
+            styles.reactionButton,
+            item.viewerHasReacted && styles.reactionButtonActive,
+            pressed && styles.reactionButtonPressed,
+          ]}
+        >
+          <Text style={styles.reactionEmoji}>😂</Text>
+          <Text
+            style={[
+              styles.reactionCount,
+              item.viewerHasReacted && styles.reactionCountActive,
+            ]}
+          >
+            {item.reactionCount}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 
@@ -345,6 +424,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e5e5',
     borderRadius: 16,
     width: '100%',
+  },
+  reactionRow: {
+    flexDirection: 'row',
+    paddingTop: 10,
+  },
+  reactionButton: {
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  reactionButtonActive: {
+    backgroundColor: '#fff7ed',
+    borderColor: '#fb923c',
+  },
+  reactionButtonPressed: {
+    opacity: 0.7,
+  },
+  reactionEmoji: {
+    fontSize: 15,
+  },
+  reactionCount: {
+    color: '#737373',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  reactionCountActive: {
+    color: '#c2410c',
   },
   emptyBox: {
     alignItems: 'center',

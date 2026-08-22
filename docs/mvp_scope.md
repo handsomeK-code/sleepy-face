@@ -161,6 +161,17 @@ Rules:
 - Challenge Success restores or allows Friends Feed Access for the current local day.
 - Friends Feed Access does not block Alarm, Friends, or Profile.
 
+### Reactions
+
+A viewer can react to a friend's Failure Card in the feed with a single 😂 reaction.
+
+Rules:
+
+- 😂 is the only reaction; this is not a multi-emoji picker.
+- Reacting is a toggle: tapping again removes the viewer's own reaction.
+- The reaction count is visible to anyone who can see the photo.
+- Comments (a separate feature, table design owned separately) remain out of scope here.
+
 ## 7. Profile
 
 Profile is the user's minimal personal area.
@@ -204,7 +215,6 @@ The following are not part of the MVP:
 - Friend recommendations
 - QR-code friend adding
 - Comments
-- Reactions
 - Rankings
 - Public all-user feed
 - Reports

@@ -10,6 +10,8 @@ export type FriendsFeedItem = {
   displayName: string;
   // Either a preset icon identifier or a custom photo URL — see isCustomProfilePhotoUrl.
   iconId: string;
+  reactionCount: number;
+  viewerHasReacted: boolean;
 };
 
 export type HomeFeedServiceErrorCode = 'not_authenticated' | 'unexpected_error';
@@ -25,6 +27,11 @@ type ProfileRow = {
   id: string;
   display_name: string;
   icon_url: string | null;
+};
+
+type ReactionRow = {
+  photo_id: string;
+  profile_id: string;
 };
 
 export class HomeFeedServiceError extends Error {
@@ -105,6 +112,31 @@ export async function listFriendsFeed(): Promise<FriendsFeedItem[]> {
     ]),
   );
 
+  const photoIds = photos.map((photo) => photo.id);
+
+  const { data: reactionRows, error: reactionError } = await supabase
+    .from('photo_reactions')
+    .select('photo_id, profile_id')
+    .in('photo_id', photoIds);
+
+  if (reactionError) {
+    throw mapHomeFeedError(reactionError);
+  }
+
+  const reactionCountByPhotoId = new Map<string, number>();
+  const viewerReactedPhotoIds = new Set<string>();
+
+  for (const reaction of (reactionRows ?? []) as ReactionRow[]) {
+    reactionCountByPhotoId.set(
+      reaction.photo_id,
+      (reactionCountByPhotoId.get(reaction.photo_id) ?? 0) + 1,
+    );
+
+    if (reaction.profile_id === profileId) {
+      viewerReactedPhotoIds.add(reaction.photo_id);
+    }
+  }
+
   return photos.map((photo) => {
     const profile = profileById.get(photo.profile_id);
 
@@ -115,6 +147,8 @@ export async function listFriendsFeed(): Promise<FriendsFeedItem[]> {
       imageUrl: photo.image_url,
       photoId: photo.id,
       profileId: photo.profile_id,
+      reactionCount: reactionCountByPhotoId.get(photo.id) ?? 0,
+      viewerHasReacted: viewerReactedPhotoIds.has(photo.id),
     };
   });
 }
