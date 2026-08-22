@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
+import { CommentBubbleIcon } from '@/components/comment-bubble-icon';
 import { FeedLoadingSkeleton } from '@/components/loading-skeletons';
 import { getProfileIconSource } from '@/constants/profile-icons';
 import { getDevMode, setDevMode } from '@/services/dev-mode';
@@ -283,7 +284,7 @@ export default function HomeScreen() {
             pressed && styles.reactionButtonPressed,
           ]}
         >
-          <Text style={styles.commentIcon}>💬</Text>
+          <CommentBubbleIcon color="#737373" size={16} />
           <Text style={styles.commentCount}>{item.commentCount}</Text>
         </Pressable>
       </View>
@@ -506,13 +507,14 @@ const styles = StyleSheet.create({
   },
   commentButton: {
     alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f1f1',
+    borderRadius: 18,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: 6,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
     paddingVertical: 7,
-  },
-  commentIcon: {
-    fontSize: 15,
   },
   commentCount: {
     color: '#737373',

@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CommentBubbleIcon } from '@/components/comment-bubble-icon';
 import { getProfileIconSource } from '@/constants/profile-icons';
 import {
   CommentServiceError,
@@ -211,7 +212,7 @@ export default function PhotoDetailScreen() {
           ListEmptyComponent={
             !isLoadingComments ? (
               <View style={styles.emptyBox}>
-                <Text style={styles.emptyIcon}>💬</Text>
+                <CommentBubbleIcon color="#a3a3a3" size={28} />
                 <Text style={styles.emptyText}>最初のコメントを送ろう</Text>
               </View>
             ) : null
@@ -257,7 +258,7 @@ export default function PhotoDetailScreen() {
                 </Pressable>
 
                 <View style={styles.commentCountBadge}>
-                  <Text style={styles.commentCountIcon}>💬</Text>
+                  <CommentBubbleIcon color="#171717" size={18} />
                   <Text style={styles.commentCountText}>{comments.length}</Text>
                 </View>
               </View>
@@ -409,9 +410,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
   },
-  commentCountIcon: {
-    fontSize: 18,
-  },
   commentCountText: {
     color: '#171717',
     fontSize: 14,
@@ -424,9 +422,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingVertical: 40,
-  },
-  emptyIcon: {
-    fontSize: 28,
   },
   emptyText: {
     color: '#737373',
