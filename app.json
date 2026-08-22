@@ -46,7 +46,8 @@
           "photosPermission": "プロフィールアイコンに設定する写真を選ぶために写真ライブラリを使用します。"
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,
