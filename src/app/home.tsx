@@ -284,7 +284,7 @@ export default function HomeScreen() {
             pressed && styles.reactionButtonPressed,
           ]}
         >
-          <CommentBubbleIcon color="#737373" size={16} />
+          <CommentBubbleIcon color="#737373" size={18} />
           <Text style={styles.commentCount}>{item.commentCount}</Text>
         </Pressable>
       </View>
@@ -507,13 +507,9 @@ const styles = StyleSheet.create({
   },
   commentButton: {
     alignItems: 'center',
-    backgroundColor: '#fafafa',
-    borderColor: '#f1f1f1',
-    borderRadius: 18,
-    borderWidth: 1,
     flexDirection: 'row',
     gap: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 4,
     paddingVertical: 7,
   },
   commentCount: {

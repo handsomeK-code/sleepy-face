@@ -258,7 +258,7 @@ export default function PhotoDetailScreen() {
                 </Pressable>
 
                 <View style={styles.commentCountBadge}>
-                  <CommentBubbleIcon color="#171717" size={18} />
+                  <CommentBubbleIcon color="#737373" size={20} />
                   <Text style={styles.commentCountText}>{comments.length}</Text>
                 </View>
               </View>
