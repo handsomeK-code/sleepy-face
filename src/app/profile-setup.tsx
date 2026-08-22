@@ -29,12 +29,9 @@ import {
   DEFAULT_PROFILE_ICON_ID,
   PROFILE_ICON_IDS,
   UserServiceError,
-  createProfile,
+  completeInitialProfileSetup,
   getMyProfile,
-  isCustomProfilePhotoUrl,
   normalizePublicUserId,
-  toProfileIconId,
-  updateProfile,
   validateInitialSetupInput,
   type InitialSetupValidationErrorCode,
 } from '@/services/user';
@@ -173,22 +170,11 @@ export default function ProfileSetupScreen() {
     setPublicUserId(validationResult.value.publicUserId);
     setIsSubmitting(true);
 
-    // create_profile only accepts a known preset icon identifier; a custom photo goes
-    // through the profiles.icon_url update path right after the Profile row exists.
-    const isCustomPhoto = isCustomProfilePhotoUrl(iconId);
-
     try {
-      await createProfile({
+      await completeInitialProfileSetup({
         ...validationResult.value,
-        iconId: toProfileIconId(iconId),
+        iconId,
       });
-
-      if (isCustomPhoto) {
-        await updateProfile({
-          displayName: validationResult.value.displayName,
-          iconId,
-        });
-      }
 
       replaceToHome();
     } catch (error) {
@@ -198,18 +184,6 @@ export default function ProfileSetupScreen() {
       ) {
         router.replace('/signin');
         return;
-      }
-
-      if (
-        error instanceof UserServiceError &&
-        error.code === 'profile_already_created'
-      ) {
-        const profile = await getMyProfile();
-
-        if (profile) {
-          replaceToHome();
-          return;
-        }
       }
 
       setErrorMessage(getCreateProfileErrorMessage(error));
