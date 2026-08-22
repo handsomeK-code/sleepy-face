@@ -4,10 +4,12 @@ type MockNativeAndroidAlarmMechanicsModule = {
   cancelSavedAlarmOccurrence: ReturnType<typeof vi.fn>;
   cancelScheduledTestAlarm: ReturnType<typeof vi.fn>;
   canScheduleExactAlarms: ReturnType<typeof vi.fn>;
+  canUseFullScreenIntent: ReturnType<typeof vi.fn>;
   getNotificationPermissionStatus: ReturnType<typeof vi.fn>;
   getRingingAlarmState: ReturnType<typeof vi.fn>;
   isIgnoringBatteryOptimizations: ReturnType<typeof vi.fn>;
   openExactAlarmSettings: ReturnType<typeof vi.fn>;
+  openFullScreenIntentSettings: ReturnType<typeof vi.fn>;
   requestIgnoreBatteryOptimizations: ReturnType<typeof vi.fn>;
   requestNotificationPermission: ReturnType<typeof vi.fn>;
   scheduleSavedAlarmOccurrence: ReturnType<typeof vi.fn>;
@@ -19,10 +21,12 @@ const nativeModule: MockNativeAndroidAlarmMechanicsModule = {
   cancelSavedAlarmOccurrence: vi.fn(),
   cancelScheduledTestAlarm: vi.fn(),
   canScheduleExactAlarms: vi.fn(),
+  canUseFullScreenIntent: vi.fn(),
   getNotificationPermissionStatus: vi.fn(),
   getRingingAlarmState: vi.fn(),
   isIgnoringBatteryOptimizations: vi.fn(),
   openExactAlarmSettings: vi.fn(),
+  openFullScreenIntentSettings: vi.fn(),
   requestIgnoreBatteryOptimizations: vi.fn(),
   requestNotificationPermission: vi.fn(),
   scheduleSavedAlarmOccurrence: vi.fn(),
@@ -232,12 +236,29 @@ describe('Android Alarm Mechanics service', () => {
     );
   });
 
+  it('checks full-screen-intent access and opens its settings', async () => {
+    const androidAlarmMechanics = await import('../android-alarm-mechanics');
+
+    nativeModule.canUseFullScreenIntent.mockResolvedValue(true);
+    await expect(androidAlarmMechanics.canUseFullScreenIntent()).resolves.toBe(
+      true,
+    );
+    expect(nativeModule.canUseFullScreenIntent).toHaveBeenCalledTimes(1);
+
+    nativeModule.openFullScreenIntentSettings.mockResolvedValue(undefined);
+    await expect(
+      androidAlarmMechanics.openFullScreenIntentSettings(),
+    ).resolves.toBeUndefined();
+    expect(nativeModule.openFullScreenIntentSettings).toHaveBeenCalledTimes(1);
+  });
+
   it('reports permissions already granted without prompting', async () => {
     const androidAlarmMechanics = await import('../android-alarm-mechanics');
 
     nativeModule.getNotificationPermissionStatus.mockResolvedValue('granted');
     nativeModule.canScheduleExactAlarms.mockResolvedValue(true);
     nativeModule.isIgnoringBatteryOptimizations.mockResolvedValue(true);
+    nativeModule.canUseFullScreenIntent.mockResolvedValue(true);
 
     await expect(
       androidAlarmMechanics.ensureAlarmPermissions(),
@@ -247,6 +268,7 @@ describe('Android Alarm Mechanics service', () => {
     expect(
       nativeModule.requestIgnoreBatteryOptimizations,
     ).not.toHaveBeenCalled();
+    expect(nativeModule.openFullScreenIntentSettings).not.toHaveBeenCalled();
   });
 
   it('requests notification permission when missing, then checks exact alarm access', async () => {
@@ -258,6 +280,7 @@ describe('Android Alarm Mechanics service', () => {
     nativeModule.requestNotificationPermission.mockResolvedValue('granted');
     nativeModule.canScheduleExactAlarms.mockResolvedValue(true);
     nativeModule.isIgnoringBatteryOptimizations.mockResolvedValue(true);
+    nativeModule.canUseFullScreenIntent.mockResolvedValue(true);
 
     await expect(
       androidAlarmMechanics.ensureAlarmPermissions(),
@@ -294,6 +317,25 @@ describe('Android Alarm Mechanics service', () => {
       reason: 'exact_alarm_unavailable',
     });
     expect(nativeModule.openExactAlarmSettings).toHaveBeenCalledTimes(1);
+    expect(nativeModule.canUseFullScreenIntent).not.toHaveBeenCalled();
+  });
+
+  it('opens full-screen-intent settings and reports full_screen_intent_unavailable when unavailable', async () => {
+    const androidAlarmMechanics = await import('../android-alarm-mechanics');
+
+    nativeModule.getNotificationPermissionStatus.mockResolvedValue('granted');
+    nativeModule.canScheduleExactAlarms.mockResolvedValue(true);
+    nativeModule.isIgnoringBatteryOptimizations.mockResolvedValue(true);
+    nativeModule.canUseFullScreenIntent.mockResolvedValue(false);
+    nativeModule.openFullScreenIntentSettings.mockResolvedValue(undefined);
+
+    await expect(
+      androidAlarmMechanics.ensureAlarmPermissions(),
+    ).resolves.toEqual({
+      granted: false,
+      reason: 'full_screen_intent_unavailable',
+    });
+    expect(nativeModule.openFullScreenIntentSettings).toHaveBeenCalledTimes(1);
   });
 
   it('requests battery optimization exemption and reports battery_optimization_enabled when not exempt', async () => {

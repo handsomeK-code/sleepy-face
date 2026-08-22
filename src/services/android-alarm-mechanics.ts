@@ -24,10 +24,12 @@ type NativeAndroidAlarmMechanicsModule = {
   cancelSavedAlarmOccurrence(alarmId: string): Promise<void>;
   cancelScheduledTestAlarm(): Promise<void>;
   canScheduleExactAlarms(): Promise<boolean>;
+  canUseFullScreenIntent(): Promise<boolean>;
   getNotificationPermissionStatus(): Promise<NotificationPermissionStatus>;
   getRingingAlarmState(): Promise<RingingAlarmState | null>;
   isIgnoringBatteryOptimizations(): Promise<boolean>;
   openExactAlarmSettings(): Promise<void>;
+  openFullScreenIntentSettings(): Promise<void>;
   requestIgnoreBatteryOptimizations(): Promise<void>;
   requestNotificationPermission(): Promise<NotificationPermissionStatus>;
   scheduleSavedAlarmOccurrence(
@@ -136,6 +138,14 @@ export function requestIgnoreBatteryOptimizations(): Promise<void> {
   return callNative((module) => module.requestIgnoreBatteryOptimizations());
 }
 
+export function canUseFullScreenIntent(): Promise<boolean> {
+  return callNative((module) => module.canUseFullScreenIntent());
+}
+
+export function openFullScreenIntentSettings(): Promise<void> {
+  return callNative((module) => module.openFullScreenIntentSettings());
+}
+
 export function getNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
   return callNative((module) => module.getNotificationPermissionStatus());
 }
@@ -185,6 +195,7 @@ export type EnsureAlarmPermissionsResult =
       reason:
         | 'battery_optimization_enabled'
         | 'exact_alarm_unavailable'
+        | 'full_screen_intent_unavailable'
         | 'notification_permission_denied';
     };
 
@@ -211,6 +222,14 @@ export async function ensureAlarmPermissions(): Promise<EnsureAlarmPermissionsRe
   if (!(await isIgnoringBatteryOptimizations())) {
     await requestIgnoreBatteryOptimizations();
     return { granted: false, reason: 'battery_optimization_enabled' };
+  }
+
+  // Without this, a full-screen-intent notification silently degrades to a normal
+  // heads-up notification instead of launching the ringing screen -- see
+  // AlarmRingingModule.kt's canUseFullScreenIntent/openFullScreenIntentSettings.
+  if (!(await canUseFullScreenIntent())) {
+    await openFullScreenIntentSettings();
+    return { granted: false, reason: 'full_screen_intent_unavailable' };
   }
 
   return { granted: true };
