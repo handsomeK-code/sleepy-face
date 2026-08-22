@@ -1,3 +1,5 @@
+import * as ImagePicker from 'expo-image-picker';
+
 import { supabase } from '@/lib/supabase';
 
 const PROFILE_ICON_PHOTO_BUCKET = 'profile-icon-photos';
@@ -78,4 +80,64 @@ export async function uploadProfileIconPhoto(
   // A fixed storage path means the CDN/browser can serve a stale cached image after an
   // upsert; a cache-busting query param forces a fresh fetch without changing the path.
   return `${publicUrl}?v=${Date.now()}`;
+}
+
+export type ProfileIconPhotoPickResult =
+  | { status: 'canceled' }
+  | { status: 'permission_denied' }
+  | { status: 'success'; url: string }
+  | { status: 'upload_failed'; cause: unknown };
+
+// Single shared entry point for "pick a profile photo," used by both the Profile screen
+// and Initial Setup so the permission/pick/upload flow and its picker options live in
+// exactly one place.
+export async function pickAndUploadProfileIconPhoto(): Promise<ProfileIconPhotoPickResult> {
+  const permissionResult =
+    await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+  if (!permissionResult.granted) {
+    return { status: 'permission_denied' };
+  }
+
+  const pickerResult = await ImagePicker.launchImageLibraryAsync({
+    allowsEditing: true,
+    aspect: [1, 1],
+    mediaTypes: ['images'],
+    quality: 0.8,
+  });
+
+  if (pickerResult.canceled) {
+    return { status: 'canceled' };
+  }
+
+  const asset = pickerResult.assets[0];
+
+  try {
+    const url = await uploadProfileIconPhoto(
+      asset.uri,
+      asset.mimeType ?? DEFAULT_PHOTO_CONTENT_TYPE,
+    );
+
+    return { status: 'success', url };
+  } catch (cause) {
+    return { status: 'upload_failed', cause };
+  }
+}
+
+// Both screens map this result to the same Japanese copy; centralized so the mapping
+// can't drift between them.
+export function getProfileIconPhotoPickErrorMessage(
+  result: ProfileIconPhotoPickResult,
+): string | null {
+  switch (result.status) {
+    case 'permission_denied':
+      return '写真ライブラリへのアクセスが許可されていません。設定アプリから許可してください。';
+    case 'upload_failed':
+      return result.cause instanceof ProfileIconPhotoUploadError
+        ? '写真をアップロードできませんでした。もう一度お試しください。'
+        : '写真を処理できませんでした。もう一度お試しください。';
+    case 'canceled':
+    case 'success':
+      return null;
+  }
 }
