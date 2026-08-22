@@ -75,3 +75,20 @@ a multi-emoji picker). Comments are a separate feature and are not part of this.
 4. Confirm it works end-to-end: in the app, open ホーム and tap the 😂 button under a
    friend's photo. The count should increment immediately and persist after a pull-to-
    refresh; tapping again should remove it.
+
+## Comments (2026-08-22)
+
+Lets a viewer comment on a friend's photo from the photo's detail screen (open it by
+tapping the photo or the 💬 button in the Home feed).
+
+1. Open the SQL Editor: https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/sql/new
+2. Open `sql/2026-08-22_comments.sql` in this repo, copy its full contents, paste into
+   the SQL Editor, and click **Run**. It should finish with "Success. No rows returned".
+   This creates the `comments` table and its RLS policies.
+3. Verify: **Table Editor** in the left sidebar
+   (https://supabase.com/dashboard/project/mgtxrvwgezcqupgjuxzq/editor) should now list a
+   `comments` table.
+4. Confirm it works end-to-end: in the app, open ホーム, tap a friend's photo (or the 💬
+   button) to open its detail screen, type a comment, and tap 送信. It should appear in
+   the thread immediately, and the 💬 count on the Home feed should increment after a
+   pull-to-refresh.

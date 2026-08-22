@@ -12,6 +12,7 @@ export type FriendsFeedItem = {
   iconId: string;
   reactionCount: number;
   viewerHasReacted: boolean;
+  commentCount: number;
 };
 
 export type HomeFeedServiceErrorCode = 'not_authenticated' | 'unexpected_error';
@@ -32,6 +33,10 @@ type ProfileRow = {
 type ReactionRow = {
   photo_id: string;
   profile_id: string;
+};
+
+type CommentCountRow = {
+  photo_id: string;
 };
 
 export class HomeFeedServiceError extends Error {
@@ -137,10 +142,29 @@ export async function listFriendsFeed(): Promise<FriendsFeedItem[]> {
     }
   }
 
+  const { data: commentRows, error: commentError } = await supabase
+    .from('comments')
+    .select('photo_id')
+    .in('photo_id', photoIds);
+
+  if (commentError) {
+    throw mapHomeFeedError(commentError);
+  }
+
+  const commentCountByPhotoId = new Map<string, number>();
+
+  for (const comment of (commentRows ?? []) as CommentCountRow[]) {
+    commentCountByPhotoId.set(
+      comment.photo_id,
+      (commentCountByPhotoId.get(comment.photo_id) ?? 0) + 1,
+    );
+  }
+
   return photos.map((photo) => {
     const profile = profileById.get(photo.profile_id);
 
     return {
+      commentCount: commentCountByPhotoId.get(photo.id) ?? 0,
       createdAt: photo.created_at,
       displayName: profile?.display_name ?? '不明なユーザー',
       iconId: toProfileIconValue(profile?.icon_url),

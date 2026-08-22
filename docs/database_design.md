@@ -115,6 +115,26 @@ Rules:
 - Authenticated users can read all reaction rows (needed to render counts on friends' photos).
 - A user can insert or delete only their own reaction rows (`profile_id = auth.uid()`).
 
+### comments
+
+A comment a Profile leaves on a friend's photo, viewed and added from the photo's detail
+screen (reached by tapping the photo or the comment-bubble button in the Home feed).
+
+| column name          | type        | constraints / memo                       |
+| --------------------- | ----------- | ---------------------------------------- |
+| `id`                  | uuid        | primary key, default `gen_random_uuid()` |
+| `user_id`             | uuid        | references `profiles(id)`, not null      |
+| `photo_id`            | uuid        | references `photos(id)`, not null        |
+| `parent_comment_id`   | uuid        | references `comments(id)`, nullable      |
+| `content`             | text        | not null                                 |
+| `created_at`          | timestamptz | not null, default `now()`                |
+
+Rules:
+
+- Authenticated users can read all comment rows (same visibility shape as `photo_reactions`).
+- A user can insert only their own comment rows (`user_id = auth.uid()`); no update or delete yet.
+- `parent_comment_id` exists for a future "comment on a comment" feature and stays nullable — a top-level comment has none. There is no UI for replies yet.
+
 ## RPC Functions
 
 ### create_profile
@@ -162,6 +182,7 @@ Current RLS policies:
 - Authenticated users can read friend relation rows where they are either side.
 - Authenticated users can insert friend relation rows only from their own Profile.
 - Authenticated users can read all photo reaction rows, and insert/delete only their own.
+- Authenticated users can read all comment rows, and insert only their own.
 
 ## Deferred Backend Tables
 
