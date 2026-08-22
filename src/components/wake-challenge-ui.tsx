@@ -1,5 +1,6 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
+import { LoadingButtonContent } from '@/components/loading';
 import type { AlarmTimerState } from '@/services/alarm-timer';
 
 export const ALARM_TIMER_SECONDS = 180;
@@ -20,6 +21,7 @@ export function formatRemainingTime(timer: AlarmTimerState | null): string {
 type ActionButtonProps = {
   disabled?: boolean;
   loading?: boolean;
+  loadingLabel?: string;
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary';
@@ -29,6 +31,7 @@ export function ActionButton({
   disabled,
   label,
   loading,
+  loadingLabel = '処理中...',
   onPress,
   variant = 'primary',
 }: ActionButtonProps) {
@@ -46,18 +49,16 @@ export function ActionButton({
         (disabled || loading) && styles.buttonDisabled,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={isPrimary ? '#ffffff' : '#171717'} />
-      ) : (
-        <Text
-          style={[
-            styles.buttonText,
-            isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
-          ]}
-        >
-          {label}
-        </Text>
-      )}
+      <LoadingButtonContent
+        label={label}
+        loading={loading ?? false}
+        loadingLabel={loadingLabel}
+        textStyle={[
+          styles.buttonText,
+          isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
+        ]}
+        tone={isPrimary ? 'light' : 'dark'}
+      />
     </Pressable>
   );
 }

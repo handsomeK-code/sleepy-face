@@ -20,6 +20,7 @@ import {
   PROFILE_ICON_LABELS,
   PROFILE_ICON_SOURCES,
 } from '@/constants/profile-icons';
+import { LoadingButtonContent, LoadingState } from '@/components/loading';
 import { getCurrentUserId } from '@/services/auth';
 import {
   getProfileIconPhotoPickErrorMessage,
@@ -195,9 +196,11 @@ export default function ProfileSetupScreen() {
   if (isCheckingProfile) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <Text>確認中...</Text>
-        </View>
+        <LoadingState
+          message="プロフィールを確認しています..."
+          size="large"
+          variant="screen"
+        />
       </SafeAreaView>
     );
   }
@@ -312,9 +315,13 @@ export default function ProfileSetupScreen() {
                 isSubmitting && styles.submitButtonDisabled,
               ]}
             >
-              <Text style={styles.submitButtonText}>
-                {isSubmitting ? '作成中...' : '登録する'}
-              </Text>
+              <LoadingButtonContent
+                label="登録する"
+                loading={isSubmitting}
+                loadingLabel="作成中..."
+                textStyle={styles.submitButtonText}
+                tone="light"
+              />
             </Pressable>
 
             {errorMessage && (

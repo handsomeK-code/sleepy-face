@@ -22,6 +22,15 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/app-icon.png",
+          "imageWidth": 128,
+          "resizeMode": "contain"
+        }
+      ],
       "./plugins/with-android-alarm-mechanics",
       [
         "expo-camera",

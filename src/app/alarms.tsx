@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
+import { AlarmListLoadingSkeleton } from '@/components/loading-skeletons';
 import {
   AndroidAlarmMechanicsError,
   ensureAlarmPermissions,
@@ -342,10 +342,7 @@ export default function AlarmsScreen() {
           )}
 
           {isLoading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator color="#171717" />
-              <Text style={styles.loadingText}>アラームを読み込み中...</Text>
-            </View>
+            <AlarmListLoadingSkeleton />
           ) : (
             <FlatList
               contentContainerStyle={styles.alarmList}
@@ -426,15 +423,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 10,
-  },
-  loadingBox: {
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 44,
-  },
-  loadingText: {
-    color: '#737373',
-    fontSize: 14,
   },
   alarmList: {
     gap: 14,

@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   ScrollView,
@@ -13,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
+import { FeedLoadingSkeleton } from '@/components/loading-skeletons';
 import { getProfileIconSource } from '@/constants/profile-icons';
 import { getDevMode, setDevMode } from '@/services/dev-mode';
 import {
@@ -193,10 +193,7 @@ export default function HomeScreen() {
           {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 
           {isLoading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator color="#171717" />
-              <Text style={styles.loadingText}>フィードを読み込み中...</Text>
-            </View>
+            <FeedLoadingSkeleton />
           ) : accessState === 'blocked' ? (
             <ScrollView
               contentContainerStyle={styles.blockedScrollContent}
@@ -280,15 +277,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 10,
-  },
-  loadingBox: {
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 44,
-  },
-  loadingText: {
-    color: '#737373',
-    fontSize: 14,
   },
   blockedScrollContent: {
     flexGrow: 1,

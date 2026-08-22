@@ -15,6 +15,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
+import { LoadingButtonContent } from '@/components/loading';
+import { ProfileLoadingSkeleton } from '@/components/loading-skeletons';
 import {
   getProfileIconSource,
   PROFILE_ICON_LABELS,
@@ -256,12 +258,7 @@ export default function ProfileScreen() {
 
         <View style={styles.content}>
           {isLoading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator color="#171717" />
-              <Text style={styles.loadingText}>
-                プロフィールを読み込み中...
-              </Text>
-            </View>
+            <ProfileLoadingSkeleton />
           ) : (
             <FlatList
               contentContainerStyle={styles.photoList}
@@ -361,9 +358,13 @@ export default function ProfileScreen() {
                       isSaving && styles.saveButtonDisabled,
                     ]}
                   >
-                    <Text style={styles.saveButtonText}>
-                      {isSaving ? '保存中...' : '保存する'}
-                    </Text>
+                    <LoadingButtonContent
+                      label="保存する"
+                      loading={isSaving}
+                      loadingLabel="保存中..."
+                      textStyle={styles.saveButtonText}
+                      tone="light"
+                    />
                   </Pressable>
 
                   {errorMessage && (
@@ -383,9 +384,12 @@ export default function ProfileScreen() {
                       isSigningOut && styles.saveButtonDisabled,
                     ]}
                   >
-                    <Text style={styles.signOutButtonText}>
-                      {isSigningOut ? 'ログアウト中...' : 'ログアウト'}
-                    </Text>
+                    <LoadingButtonContent
+                      label="ログアウト"
+                      loading={isSigningOut}
+                      loadingLabel="ログアウト中..."
+                      textStyle={styles.signOutButtonText}
+                    />
                   </Pressable>
 
                   <Text style={styles.sectionTitle}>失敗の記録</Text>
@@ -461,15 +465,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
-  },
-  loadingBox: {
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 44,
-  },
-  loadingText: {
-    color: '#737373',
-    fontSize: 14,
   },
   listHeader: {
     paddingBottom: 4,

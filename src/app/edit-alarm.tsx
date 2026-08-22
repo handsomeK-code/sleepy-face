@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LoadingButtonContent, LoadingState } from '@/components/loading';
 import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
@@ -347,9 +348,12 @@ export default function EditAlarmScreen() {
         </View>
 
         {isLoading ? (
-          <View style={styles.loadingArea}>
-            <Text style={styles.loadingText}>読み込み中...</Text>
-          </View>
+          <LoadingState
+            message="アラームを読み込んでいます..."
+            size="large"
+            style={styles.loadingArea}
+            variant="screen"
+          />
         ) : (
           <>
             <View style={styles.timeSection}>
@@ -407,9 +411,12 @@ export default function EditAlarmScreen() {
                   (pressed || isDeleting) && styles.deleteButtonPressed,
                 ]}
               >
-                <Text style={styles.deleteButtonText}>
-                  {isDeleting ? '削除中...' : 'アラームを削除'}
-                </Text>
+                <LoadingButtonContent
+                  label="アラームを削除"
+                  loading={isDeleting}
+                  loadingLabel="削除中..."
+                  textStyle={styles.deleteButtonText}
+                />
               </Pressable>
             </ScrollView>
           </>
@@ -429,9 +436,13 @@ export default function EditAlarmScreen() {
               (pressed || isSaving || isBusy) && styles.saveButtonPressed,
             ]}
           >
-            <Text style={styles.saveButtonText}>
-              {isSaving ? '保存中...' : '保存'}
-            </Text>
+            <LoadingButtonContent
+              label="保存"
+              loading={isSaving}
+              loadingLabel="保存中..."
+              textStyle={styles.saveButtonText}
+              tone="light"
+            />
           </Pressable>
         </View>
       </View>
@@ -472,14 +483,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   loadingArea: {
-    alignItems: 'center',
     flex: 1,
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: '#737373',
-    fontSize: 15,
-    fontWeight: '700',
   },
   scroll: {
     flex: 1,
