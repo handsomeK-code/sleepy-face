@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
@@ -12,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
+import { CommentBubbleIcon } from '@/components/comment-bubble-icon';
 import { FeedLoadingSkeleton } from '@/components/loading-skeletons';
 import { getProfileIconSource } from '@/constants/profile-icons';
 import { getDevMode, setDevMode } from '@/services/dev-mode';
@@ -188,6 +190,22 @@ export default function HomeScreen() {
     [applyReactionState],
   );
 
+  const navigateToPhotoDetail = useCallback((item: FriendsFeedItem) => {
+    router.push({
+      params: {
+        createdAt: item.createdAt,
+        displayName: item.displayName,
+        iconId: item.iconId,
+        imageUrl: item.imageUrl,
+        photoId: item.photoId,
+        profileId: item.profileId,
+        reactionCount: String(item.reactionCount),
+        viewerHasReacted: String(item.viewerHasReacted),
+      },
+      pathname: '/photo-detail',
+    });
+  }, []);
+
   const handleExitDevMode = useCallback(async () => {
     await setDevMode(false);
     setIsDevMode(false);
@@ -206,26 +224,33 @@ export default function HomeScreen() {
 
   const renderItem: ListRenderItem<FriendsFeedItem> = ({ item }) => (
     <View>
-      <View style={styles.feedCardHeader}>
-        <View style={styles.avatar}>
-          <Image
-            contentFit="cover"
-            source={getProfileIconSource(item.iconId)}
-            style={styles.avatarImage}
-          />
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => navigateToPhotoDetail(item)}
+      >
+        <View style={styles.feedCardHeader}>
+          <View style={styles.avatar}>
+            <Image
+              contentFit="cover"
+              source={getProfileIconSource(item.iconId)}
+              style={styles.avatarImage}
+            />
+          </View>
+
+          <View style={styles.feedCardHeaderText}>
+            <Text style={styles.displayName}>{item.displayName}</Text>
+            <Text style={styles.feedDate}>
+              {formatFeedDate(item.createdAt)}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.feedCardHeaderText}>
-          <Text style={styles.displayName}>{item.displayName}</Text>
-          <Text style={styles.feedDate}>{formatFeedDate(item.createdAt)}</Text>
-        </View>
-      </View>
-
-      <Image
-        contentFit="cover"
-        source={{ uri: item.imageUrl }}
-        style={styles.feedPhoto}
-      />
+        <Image
+          contentFit="cover"
+          source={{ uri: item.imageUrl }}
+          style={styles.feedPhoto}
+        />
+      </Pressable>
 
       <View style={styles.reactionRow}>
         <Pressable
@@ -248,6 +273,19 @@ export default function HomeScreen() {
           >
             {item.reactionCount}
           </Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityLabel="コメントを見る"
+          accessibilityRole="button"
+          onPress={() => navigateToPhotoDetail(item)}
+          style={({ pressed }) => [
+            styles.commentButton,
+            pressed && styles.reactionButtonPressed,
+          ]}
+        >
+          <CommentBubbleIcon color="#737373" size={18} />
+          <Text style={styles.commentCount}>{item.commentCount}</Text>
         </Pressable>
       </View>
     </View>
@@ -466,6 +504,18 @@ const styles = StyleSheet.create({
   },
   reactionCountActive: {
     color: '#c2410c',
+  },
+  commentButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 7,
+  },
+  commentCount: {
+    color: '#737373',
+    fontSize: 13,
+    fontWeight: '700',
   },
   emptyBox: {
     alignItems: 'center',

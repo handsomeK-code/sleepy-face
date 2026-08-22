@@ -103,6 +103,16 @@ describe('home feed service', () => {
     });
     const reactionsSelect = vi.fn().mockReturnValue({ in: reactionsIn });
 
+    const commentsIn = vi.fn().mockResolvedValue({
+      data: [
+        { photo_id: 'photo-1' },
+        { photo_id: 'photo-1' },
+        { photo_id: 'photo-1' },
+      ],
+      error: null,
+    });
+    const commentsSelect = vi.fn().mockReturnValue({ in: commentsIn });
+
     mocks.from.mockImplementation((table: string) => {
       if (table === 'photos') {
         return { select: photosSelect };
@@ -116,11 +126,16 @@ describe('home feed service', () => {
         return { select: reactionsSelect };
       }
 
+      if (table === 'comments') {
+        return { select: commentsSelect };
+      }
+
       throw new Error(`unexpected table: ${table}`);
     });
 
     await expect(listFriendsFeed()).resolves.toEqual([
       {
+        commentCount: 3,
         createdAt: '2026-08-19T00:00:00.000Z',
         displayName: 'Sleepy Friend',
         iconId: 'woman',
@@ -138,6 +153,7 @@ describe('home feed service', () => {
     });
     expect(profilesIn).toHaveBeenCalledWith('id', ['profile-b']);
     expect(reactionsIn).toHaveBeenCalledWith('photo_id', ['photo-1']);
+    expect(commentsIn).toHaveBeenCalledWith('photo_id', ['photo-1']);
   });
 
   it('falls back to a default display name when the friend profile is missing', async () => {

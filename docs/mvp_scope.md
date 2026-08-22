@@ -170,7 +170,19 @@ Rules:
 - 😂 is the only reaction; this is not a multi-emoji picker.
 - Reacting is a toggle: tapping again removes the viewer's own reaction.
 - The reaction count is visible to anyone who can see the photo.
-- Comments (a separate feature, table design owned separately) remain out of scope here.
+
+### Comments
+
+A viewer can comment on a friend's Failure Card, on the photo's detail screen.
+
+Rules:
+
+- Tapping the photo, or the comment-bubble button, in the Home feed opens the photo's detail screen.
+- The detail screen shows the photo, the 😂 reaction control, the comment count, and the comment thread oldest-first.
+- A viewer can add a comment from the detail screen; the viewer's own comments are labeled "自分" instead of their Display Name.
+- Comments are visible to anyone who can see the photo.
+- Comment on a comment (threaded replies) is optional, not required for the MVP.
+- There is no edit or delete for a comment yet.
 
 ## 7. Profile
 
@@ -214,7 +226,7 @@ The following are not part of the MVP:
 - Contact import
 - Friend recommendations
 - QR-code friend adding
-- Comments
+- Threaded comment replies
 - Rankings
 - Public all-user feed
 - Reports
