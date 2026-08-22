@@ -20,6 +20,7 @@ import {
   DEFAULT_ALARM_SOUND_ID,
   type AlarmSoundId,
 } from '@/constants/alarm-sounds';
+import { previewAlarmSound } from '@/services/alarm-sound-preview';
 import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
@@ -321,7 +322,10 @@ export default function AddAlarmScreen() {
                     accessibilityRole="radio"
                     accessibilityState={{ selected: isSelected }}
                     key={id}
-                    onPress={() => setSoundId(id)}
+                    onPress={() => {
+                      setSoundId(id);
+                      previewAlarmSound(id);
+                    }}
                     style={[
                       styles.soundOption,
                       isSelected && styles.soundOptionSelected,
