@@ -359,6 +359,50 @@ export async function createProfile({
   }
 }
 
+export type CompleteInitialProfileSetupInput = {
+  displayName: string;
+  publicUserId: string;
+  // Either one of PROFILE_ICON_IDS or a custom photo URL — see isCustomProfilePhotoUrl.
+  iconId: string;
+};
+
+// create_profile only accepts a known preset icon identifier; a custom photo goes through
+// the profiles.icon_url update path right after the Profile row exists. If createProfile
+// reports the row already exists (e.g. a retry after a previous attempt's photo attach
+// failed), the pending custom photo is still attached here rather than silently dropped.
+export async function completeInitialProfileSetup({
+  displayName,
+  iconId,
+  publicUserId,
+}: CompleteInitialProfileSetupInput): Promise<void> {
+  const isCustomPhoto = isCustomProfilePhotoUrl(iconId);
+
+  try {
+    await createProfile({
+      displayName,
+      iconId: toProfileIconId(iconId),
+      publicUserId,
+    });
+  } catch (error) {
+    if (
+      error instanceof UserServiceError &&
+      error.code === 'profile_already_created'
+    ) {
+      if (isCustomPhoto) {
+        await updateProfile({ displayName, iconId });
+      }
+
+      return;
+    }
+
+    throw error;
+  }
+
+  if (isCustomPhoto) {
+    await updateProfile({ displayName, iconId });
+  }
+}
+
 // Display Name and Profile Icon are editable from the Profile screen; User ID stays fixed
 // after Initial Setup, so this updates the profiles row directly without any uniqueness check.
 export async function updateProfile(
