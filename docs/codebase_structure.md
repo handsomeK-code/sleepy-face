@@ -110,13 +110,13 @@ Service tests live in `src/services/__tests__/` and use Vitest.
 
 | path | responsibility |
 | --- | --- |
-| `components/bottom-nav.tsx` | Four-tab bottom navigation |
-| `components/loading.tsx` | Loading states and buttons |
-| `components/loading-skeletons.tsx` | Feed, Alarm, Friend, and Profile skeletons |
-| `components/wake-challenge-ui.tsx` | Shared challenge controls, timer formatting, 180-second and three-attempt constants |
-| `components/comment-bubble-icon.tsx` | Comment icon |
-| `constants/alarm-sounds.ts` | Four Alarm Sound IDs and labels |
-| `constants/profile-icons.ts` | Preset icon assets and custom-photo source resolution |
+| `src/components/bottom-nav.tsx` | Four-tab bottom navigation |
+| `src/components/loading.tsx` | Loading states and buttons |
+| `src/components/loading-skeletons.tsx` | Feed, Alarm, Friend, and Profile skeletons |
+| `src/components/wake-challenge-ui.tsx` | Shared challenge controls, timer formatting, 180-second and three-attempt constants |
+| `src/components/comment-bubble-icon.tsx` | Comment icon |
+| `src/constants/alarm-sounds.ts` | Four Alarm Sound IDs and labels |
+| `src/constants/profile-icons.ts` | Preset icon assets and custom-photo source resolution |
 
 ## Native Modules
 
