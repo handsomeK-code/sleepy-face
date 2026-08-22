@@ -6,56 +6,68 @@ import {
 } from '../quiz-answer-feedback';
 
 describe('replaySoundEffect', () => {
-  it('rewinds and plays a sound effect', () => {
-    const seekTo = vi.fn().mockResolvedValue(undefined);
+  it('waits for the rewind before playing a sound effect', async () => {
+    let finishRewind: (() => void) | undefined;
+    const seekTo = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishRewind = resolve;
+        }),
+    );
     const play = vi.fn();
 
-    replaySoundEffect({ play, seekTo });
+    const feedback = replaySoundEffect({ play, seekTo });
 
     expect(seekTo).toHaveBeenCalledWith(0);
+    expect(play).not.toHaveBeenCalled();
+
+    finishRewind?.();
+    await feedback;
+
     expect(play).toHaveBeenCalledOnce();
   });
 
-  it('does not throw when playback fails synchronously', () => {
+  it('does not reject when playback fails synchronously', async () => {
     const playbackError = new Error('Audio is unavailable.');
 
-    expect(() =>
+    await expect(
       replaySoundEffect({
         play: () => {
           throw playbackError;
         },
         seekTo: vi.fn().mockResolvedValue(undefined),
       }),
-    ).not.toThrow();
+    ).resolves.toBeUndefined();
   });
 
-  it('handles an asynchronous rewind failure', async () => {
+  it('attempts playback after an asynchronous rewind failure', async () => {
     const rewindError = new Error('Audio is not loaded.');
+    const play = vi.fn();
 
-    replaySoundEffect({
-      play: vi.fn(),
+    await replaySoundEffect({
+      play,
       seekTo: vi.fn().mockRejectedValue(rewindError),
     });
 
-    await Promise.resolve();
+    expect(play).toHaveBeenCalledOnce();
   });
 });
 
 describe('playIncorrectQuizAnswerFeedback', () => {
-  it('plays the incorrect sound and triggers an error haptic', () => {
+  it('plays the incorrect sound and triggers an error haptic', async () => {
     const play = vi.fn();
     const seekTo = vi.fn().mockResolvedValue(undefined);
     const notifyError = vi.fn().mockResolvedValue(undefined);
 
-    playIncorrectQuizAnswerFeedback({ play, seekTo }, notifyError);
+    await playIncorrectQuizAnswerFeedback({ play, seekTo }, notifyError);
 
     expect(seekTo).toHaveBeenCalledWith(0);
     expect(play).toHaveBeenCalledOnce();
     expect(notifyError).toHaveBeenCalledOnce();
   });
 
-  it('does not throw when haptics fail synchronously', () => {
-    expect(() =>
+  it('does not reject when haptics fail synchronously', async () => {
+    await expect(
       playIncorrectQuizAnswerFeedback(
         {
           play: vi.fn(),
@@ -65,18 +77,16 @@ describe('playIncorrectQuizAnswerFeedback', () => {
           throw new Error('Haptics are unavailable.');
         },
       ),
-    ).not.toThrow();
+    ).resolves.toBeUndefined();
   });
 
   it('handles an asynchronous haptic failure', async () => {
-    playIncorrectQuizAnswerFeedback(
+    await playIncorrectQuizAnswerFeedback(
       {
         play: vi.fn(),
         seekTo: vi.fn().mockResolvedValue(undefined),
       },
       vi.fn().mockRejectedValue(new Error('Haptics are unavailable.')),
     );
-
-    await Promise.resolve();
   });
 });

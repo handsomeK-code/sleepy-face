@@ -5,24 +5,34 @@ export type SoundEffectPlayer = {
 
 export type ErrorHapticNotifier = () => Promise<void>;
 
-export function replaySoundEffect(player: SoundEffectPlayer): void {
+export async function replaySoundEffect(
+  player: SoundEffectPlayer,
+): Promise<void> {
   try {
-    void player.seekTo(0).catch(() => {});
+    await player.seekTo(0);
+  } catch {
+    // Playback should still be attempted if rewinding is temporarily unavailable.
+  }
+
+  try {
     player.play();
   } catch {
     // Feedback is best-effort and must never interrupt quiz progress.
   }
 }
 
-export function playIncorrectQuizAnswerFeedback(
+export async function playIncorrectQuizAnswerFeedback(
   player: SoundEffectPlayer,
   notifyError: ErrorHapticNotifier,
-): void {
-  replaySoundEffect(player);
+): Promise<void> {
+  const soundFeedback = replaySoundEffect(player);
+  let hapticFeedback = Promise.resolve();
 
   try {
-    void notifyError().catch(() => {});
+    hapticFeedback = notifyError().catch(() => {});
   } catch {
     // Haptics are best-effort and must never interrupt quiz progress.
   }
+
+  await Promise.all([soundFeedback, hapticFeedback]);
 }

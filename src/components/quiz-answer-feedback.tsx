@@ -1,10 +1,11 @@
-import { useAudioPlayer } from 'expo-audio';
+import { preload, setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import {
   createContext,
   type PropsWithChildren,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
 } from 'react';
 
@@ -15,6 +16,21 @@ import {
 
 const correctAnswerSound = require('../../assets/sounds/quiz-correct.wav');
 const incorrectAnswerSound = require('../../assets/sounds/quiz-incorrect.mp3');
+const soundEffectPlayerOptions = {
+  downloadFirst: true,
+  keepAudioSessionActive: true,
+} as const;
+
+function preloadSoundEffect(source: number): void {
+  try {
+    void preload(source).catch(() => {});
+  } catch {
+    // The player will retry loading the bundled asset when it mounts.
+  }
+}
+
+preloadSoundEffect(correctAnswerSound);
+preloadSoundEffect(incorrectAnswerSound);
 
 type QuizAnswerFeedbackContextValue = {
   playCorrectAnswerFeedback: () => void;
@@ -25,15 +41,28 @@ const QuizAnswerFeedbackContext =
   createContext<QuizAnswerFeedbackContextValue | null>(null);
 
 export function QuizAnswerFeedbackProvider({ children }: PropsWithChildren) {
-  const correctAnswerPlayer = useAudioPlayer(correctAnswerSound);
-  const incorrectAnswerPlayer = useAudioPlayer(incorrectAnswerSound);
+  const correctAnswerPlayer = useAudioPlayer(
+    correctAnswerSound,
+    soundEffectPlayerOptions,
+  );
+  const incorrectAnswerPlayer = useAudioPlayer(
+    incorrectAnswerSound,
+    soundEffectPlayerOptions,
+  );
+
+  useEffect(() => {
+    void setAudioModeAsync({
+      interruptionMode: 'mixWithOthers',
+      playsInSilentMode: true,
+    }).catch(() => {});
+  }, []);
 
   const playCorrectAnswerFeedback = useCallback(() => {
-    replaySoundEffect(correctAnswerPlayer);
+    void replaySoundEffect(correctAnswerPlayer);
   }, [correctAnswerPlayer]);
 
   const playIncorrectAnswerFeedback = useCallback(() => {
-    playIncorrectQuizAnswerFeedback(incorrectAnswerPlayer, () =>
+    void playIncorrectQuizAnswerFeedback(incorrectAnswerPlayer, () =>
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error),
     );
   }, [incorrectAnswerPlayer]);
