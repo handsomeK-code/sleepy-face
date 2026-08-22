@@ -15,6 +15,7 @@ import {
   MAX_BAD_PHOTO_ATTEMPTS,
   formatRemainingTime,
 } from '@/components/wake-challenge-ui';
+import { stopRingingAlarm } from '@/services/android-alarm-mechanics';
 import {
   getAlarmTimerState,
   pauseTimer,
@@ -114,6 +115,9 @@ export default function FaceCheckScreen() {
       setIsCameraOpen(false);
 
       if (shouldRetainFaceProofPhoto(nextFaceProofResult)) {
+        // Stop here: Face Verification passed, so the wake challenge is proceeding
+        // (best-effort — a failure to stop it must never block the flow).
+        stopRingingAlarm().catch(() => {});
         router.replace({
           pathname: '/face-check-success',
           params: {
@@ -131,6 +135,9 @@ export default function FaceCheckScreen() {
         getNextBadPhotoAttemptCount(badPhotoAttempts);
 
       if (nextBadPhotoAttempts >= MAX_BAD_PHOTO_ATTEMPTS) {
+        // Stop here too: the 3rd Bad Photo Attempt ends the challenge in failure, so
+        // there is no more chance to retake the photo.
+        stopRingingAlarm().catch(() => {});
         router.replace({
           pathname: '/quiz-failure',
           params: { reason: 'bad-photo-limit' },
