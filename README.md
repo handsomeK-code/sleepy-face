@@ -42,13 +42,6 @@ npm run lint
 
 To apply automatic fixes, run `npm run format` and `npm run lint:fix`.
 
-## Local secrets
-
-These files are gitignored and must be supplied locally — never commit them:
-
-- `.env.local` — Supabase URL/publishable key (see `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`).
-- `google-services.json` — Android Firebase config, needed for FCM push notifications. Download this project's copy from the [Firebase console](https://console.firebase.google.com) (Project settings → your Android app → `google-services.json`) and place it at the project root before running an Android build. EAS cloud builds source this file through EAS's `GOOGLE_SERVICES_JSON` file-type environment variable instead (see `app.config.js`); a local copy is only needed for `expo run:android`/native builds on your own machine.
-
 ## Get a fresh project
 
 When you're ready, run:
