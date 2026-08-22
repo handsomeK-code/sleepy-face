@@ -5,6 +5,8 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 import {
   notifyFriendsOfFailure,
+  unwrapRowOrThrow,
+  unwrapRowsOrThrow,
   type FailedProfile,
   type FriendRelationRow,
   type PushMessage,
@@ -96,7 +98,11 @@ Deno.serve(async (request: Request) => {
         JSON.stringify({ data, error, profileId }),
       );
 
-      return data;
+      return unwrapRowOrThrow(
+        data,
+        error,
+        'Could not load the failed profile.',
+      );
     },
     listFriendRelations: async (profileId): Promise<FriendRelationRow[]> => {
       const { data, error } = await supabase
@@ -109,7 +115,7 @@ Deno.serve(async (request: Request) => {
         JSON.stringify({ count: data?.length ?? 0, data, error, profileId }),
       );
 
-      return data ?? [];
+      return unwrapRowsOrThrow(data, error, 'Could not load friend relations.');
     },
     listPushTokens: async (profileIds): Promise<PushTokenRow[]> => {
       const { data, error } = await supabase
@@ -122,7 +128,7 @@ Deno.serve(async (request: Request) => {
         JSON.stringify({ count: data?.length ?? 0, data, error, profileIds }),
       );
 
-      return data ?? [];
+      return unwrapRowsOrThrow(data, error, 'Could not load push tokens.');
     },
     sendPush: sendExpoPush,
   });

@@ -4,8 +4,66 @@ import {
   buildFailurePushMessages,
   notifyFriendsOfFailure,
   resolveFriendProfileId,
+  unwrapRowOrThrow,
+  unwrapRowsOrThrow,
   type NotifyDeps,
 } from './notify';
+
+describe('unwrapRowOrThrow', () => {
+  it('returns the row when there is no error', () => {
+    expect(
+      unwrapRowOrThrow({ id: '1' }, null, 'Could not load the row.'),
+    ).toEqual({ id: '1' });
+  });
+
+  it('returns null when there is no error and no matching row', () => {
+    expect(unwrapRowOrThrow(null, null, 'Could not load the row.')).toBeNull();
+  });
+
+  it('throws when there is an error, even if data is non-null', () => {
+    const queryError = new Error('connection reset');
+
+    expect(() =>
+      unwrapRowOrThrow({ id: '1' }, queryError, 'Could not load the row.'),
+    ).toThrowError('Could not load the row.');
+  });
+
+  it('throws when there is an error and data is null', () => {
+    const queryError = new Error('connection reset');
+
+    expect(() =>
+      unwrapRowOrThrow(null, queryError, 'Could not load the row.'),
+    ).toThrowError('Could not load the row.');
+  });
+});
+
+describe('unwrapRowsOrThrow', () => {
+  it('returns the rows when there is no error', () => {
+    expect(
+      unwrapRowsOrThrow([{ id: '1' }], null, 'Could not load rows.'),
+    ).toEqual([{ id: '1' }]);
+  });
+
+  it('returns an empty array when there is no error and no rows', () => {
+    expect(unwrapRowsOrThrow([], null, 'Could not load rows.')).toEqual([]);
+  });
+
+  it('throws when there is an error, even if data is non-null', () => {
+    const queryError = new Error('connection reset');
+
+    expect(() =>
+      unwrapRowsOrThrow([{ id: '1' }], queryError, 'Could not load rows.'),
+    ).toThrowError('Could not load rows.');
+  });
+
+  it('throws when there is an error and data is null', () => {
+    const queryError = new Error('connection reset');
+
+    expect(() =>
+      unwrapRowsOrThrow(null, queryError, 'Could not load rows.'),
+    ).toThrowError('Could not load rows.');
+  });
+});
 
 describe('resolveFriendProfileId', () => {
   it('resolves the other side of the relation regardless of which side is the profile', () => {
@@ -176,6 +234,19 @@ describe('notifyFriendsOfFailure', () => {
     expect(deps.listFriendRelations).not.toHaveBeenCalled();
   });
 
+  it('propagates a getFailedProfile failure instead of treating it as no such profile', async () => {
+    const deps = makeDeps({
+      getFailedProfile: vi
+        .fn()
+        .mockRejectedValue(new Error('Could not load the failed profile.')),
+    });
+
+    await expect(notifyFriendsOfFailure('profile-a', deps)).rejects.toThrow(
+      'Could not load the failed profile.',
+    );
+    expect(deps.listFriendRelations).not.toHaveBeenCalled();
+  });
+
   it('does not call sendPush when there are friends but none have a registered device', async () => {
     const deps = makeDeps({
       listFriendRelations: vi
@@ -189,6 +260,37 @@ describe('notifyFriendsOfFailure', () => {
     const messages = await notifyFriendsOfFailure('profile-a', deps);
 
     expect(messages).toEqual([]);
+    expect(deps.sendPush).not.toHaveBeenCalled();
+  });
+
+  it('propagates a listFriendRelations failure instead of treating it as no friends', async () => {
+    const deps = makeDeps({
+      listFriendRelations: vi
+        .fn()
+        .mockRejectedValue(new Error('Could not load friend relations.')),
+    });
+
+    await expect(notifyFriendsOfFailure('profile-a', deps)).rejects.toThrow(
+      'Could not load friend relations.',
+    );
+    expect(deps.sendPush).not.toHaveBeenCalled();
+  });
+
+  it('propagates a listPushTokens failure instead of treating it as no devices', async () => {
+    const deps = makeDeps({
+      listFriendRelations: vi
+        .fn()
+        .mockResolvedValue([
+          { friend_profile_id: 'profile-b', profile_id: 'profile-a' },
+        ]),
+      listPushTokens: vi
+        .fn()
+        .mockRejectedValue(new Error('Could not load push tokens.')),
+    });
+
+    await expect(notifyFriendsOfFailure('profile-a', deps)).rejects.toThrow(
+      'Could not load push tokens.',
+    );
     expect(deps.sendPush).not.toHaveBeenCalled();
   });
 });

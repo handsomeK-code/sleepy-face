@@ -28,6 +28,35 @@ export type NotifyDeps = {
 
 const FAILURE_PUSH_BODY = 'failed their wake-up challenge 😴';
 
+// A failed query must not be treated the same as "no rows" — a DB/RLS error masquerading
+// as an empty result silently drops real notifications. Callers pass their Supabase
+// `{ data, error }` pair straight through; `error` always wins even if `data` is present.
+export function unwrapRowsOrThrow<T>(
+  data: T[] | null,
+  error: unknown,
+  message: string,
+): T[] {
+  if (error) {
+    throw new Error(message, { cause: error });
+  }
+
+  return data ?? [];
+}
+
+// Same policy as unwrapRowsOrThrow, for a single-row lookup (e.g. `.maybeSingle()`) where
+// a null result legitimately means "no such row" rather than "no rows in a list."
+export function unwrapRowOrThrow<T>(
+  data: T | null,
+  error: unknown,
+  message: string,
+): T | null {
+  if (error) {
+    throw new Error(message, { cause: error });
+  }
+
+  return data;
+}
+
 // Mirrors the app's friend.ts resolveFriendProfileId: a friends_relations row names
 // both sides of the mutual relation, so the "other" profile depends on which side
 // the failed profile is on.
