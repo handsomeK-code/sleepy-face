@@ -15,6 +15,7 @@ import {
   MAX_BAD_PHOTO_ATTEMPTS,
   formatRemainingTime,
 } from '@/components/wake-challenge-ui';
+import { stopRingingAlarm } from '@/services/android-alarm-mechanics';
 import {
   getAlarmTimerState,
   pauseTimer,
@@ -107,6 +108,11 @@ export default function FaceCheckScreen() {
         quality: 0.85,
       });
       const savedPhoto = await saveFailurePhotoLocally(photo.uri);
+
+      // The alarm stops here, at photo capture, regardless of whether the photo goes on
+      // to pass Face Verification — best-effort, since a failure to stop it must never
+      // block the wake challenge from proceeding.
+      stopRingingAlarm().catch(() => {});
 
       pauseTimer();
       const nextFaceProofResult = await checkFaceProof(savedPhoto.uri);
