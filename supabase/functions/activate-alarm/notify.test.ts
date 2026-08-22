@@ -7,21 +7,32 @@ import {
 } from './notify';
 
 describe('buildActivationPushMessages', () => {
-  it('builds one alarm-activation message per token', () => {
-    expect(buildActivationPushMessages(['token-1', 'token-2'])).toEqual([
+  it('builds one alarm-activation message per token, with no top-level title/body', () => {
+    const messages = buildActivationPushMessages(['token-1', 'token-2']);
+
+    expect(messages).toEqual([
       {
-        body: expect.any(String),
-        data: { type: 'alarm-activation' },
-        title: expect.any(String),
+        data: {
+          body: expect.any(String),
+          title: expect.any(String),
+          type: 'alarm-activation',
+        },
         to: 'token-1',
       },
       {
-        body: expect.any(String),
-        data: { type: 'alarm-activation' },
-        title: expect.any(String),
+        data: {
+          body: expect.any(String),
+          title: expect.any(String),
+          type: 'alarm-activation',
+        },
         to: 'token-2',
       },
     ]);
+
+    for (const message of messages) {
+      expect(message).not.toHaveProperty('title');
+      expect(message).not.toHaveProperty('body');
+    }
   });
 
   it('returns no messages when there are no tokens', () => {

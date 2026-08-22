@@ -7,11 +7,19 @@ export type PushTokenRow = {
   token: string;
 };
 
+// Deliberately has NO top-level title/body: Expo's push API includes an Android
+// `notification` payload block whenever a message has top-level title/body, and Android
+// auto-displays notification-type FCM messages via its own system channel while the app
+// is backgrounded -- bypassing AlarmActivationMessagingService.onMessageReceived()
+// entirely, so the native ring logic never runs. Keeping this a pure data message (title/
+// body nested inside `data` instead) guarantees delivery always reaches our own handler.
 export type PushMessage = {
   to: string;
-  title: string;
-  body: string;
-  data: { type: 'alarm-activation' };
+  data: {
+    type: 'alarm-activation';
+    title: string;
+    body: string;
+  };
 };
 
 export type ActivateAlarmDeps = {
@@ -36,9 +44,11 @@ const ACTIVATION_PUSH_BODY = 'A friend is activating your alarm 📣';
 
 export function buildActivationPushMessages(tokens: string[]): PushMessage[] {
   return tokens.map((token) => ({
-    body: ACTIVATION_PUSH_BODY,
-    data: { type: 'alarm-activation' },
-    title: ACTIVATION_PUSH_TITLE,
+    data: {
+      body: ACTIVATION_PUSH_BODY,
+      title: ACTIVATION_PUSH_TITLE,
+      type: 'alarm-activation',
+    },
     to: token,
   }));
 }
