@@ -82,7 +82,7 @@ Storage bucket used by the custom profile icon photo picker (Initial Setup and t
 
 Rules:
 
-- Uploaded under a path scoped by the current Auth User ID (`{profileId}/icon.{contentTypeExtension}`, upserted when the same path is reused).
+- Uploaded under a path scoped by the current Auth User ID (`{authUserId}/icon.{contentTypeExtension}`, upserted when the same path is reused).
 - The app stores the public URL directly in `profiles.icon_url`.
 - Publicly readable, same as `failure-photos`, since friends need to see it in the feed and Friend Search.
 
