@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -23,8 +22,8 @@ import {
 } from '@/constants/profile-icons';
 import { getCurrentUserId } from '@/services/auth';
 import {
-  ProfileIconPhotoUploadError,
-  uploadProfileIconPhoto,
+  getProfileIconPhotoPickErrorMessage,
+  pickAndUploadProfileIconPhoto,
 } from '@/services/profile-icon-photo';
 import {
   DEFAULT_PROFILE_ICON_ID,
@@ -137,40 +136,21 @@ export default function ProfileSetupScreen() {
 
   const handlePickPhoto = useCallback(async () => {
     setErrorMessage(null);
-
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permissionResult.granted) {
-      setErrorMessage(
-        '写真ライブラリへのアクセスが許可されていません。設定アプリから許可してください。',
-      );
-      return;
-    }
-
-    const pickerResult = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      mediaTypes: ['images'],
-      quality: 0.8,
-    });
-
-    if (pickerResult.canceled) {
-      return;
-    }
-
     setIsPickingPhoto(true);
 
     try {
-      const photoUrl = await uploadProfileIconPhoto(pickerResult.assets[0].uri);
+      const result = await pickAndUploadProfileIconPhoto();
 
-      setIconId(photoUrl);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof ProfileIconPhotoUploadError
-          ? '写真をアップロードできませんでした。もう一度お試しください。'
-          : '写真を処理できませんでした。もう一度お試しください。',
-      );
+      if (result.status === 'success') {
+        setIconId(result.url);
+        return;
+      }
+
+      const message = getProfileIconPhotoPickErrorMessage(result);
+
+      if (message) {
+        setErrorMessage(message);
+      }
     } finally {
       setIsPickingPhoto(false);
     }
