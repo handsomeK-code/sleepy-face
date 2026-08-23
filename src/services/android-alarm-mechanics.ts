@@ -26,7 +26,9 @@ type NativeAndroidAlarmMechanicsModule = {
   canScheduleExactAlarms(): Promise<boolean>;
   getNotificationPermissionStatus(): Promise<NotificationPermissionStatus>;
   getRingingAlarmState(): Promise<RingingAlarmState | null>;
+  isIgnoringBatteryOptimizations(): Promise<boolean>;
   openExactAlarmSettings(): Promise<void>;
+  requestIgnoreBatteryOptimizations(): Promise<void>;
   requestNotificationPermission(): Promise<NotificationPermissionStatus>;
   scheduleSavedAlarmOccurrence(
     alarmId: string,
@@ -126,6 +128,14 @@ export function openExactAlarmSettings(): Promise<void> {
   return callNative((module) => module.openExactAlarmSettings());
 }
 
+export function isIgnoringBatteryOptimizations(): Promise<boolean> {
+  return callNative((module) => module.isIgnoringBatteryOptimizations());
+}
+
+export function requestIgnoreBatteryOptimizations(): Promise<void> {
+  return callNative((module) => module.requestIgnoreBatteryOptimizations());
+}
+
 export function getNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
   return callNative((module) => module.getNotificationPermissionStatus());
 }
@@ -172,7 +182,10 @@ export type EnsureAlarmPermissionsResult =
   | { granted: true }
   | {
       granted: false;
-      reason: 'exact_alarm_unavailable' | 'notification_permission_denied';
+      reason:
+        | 'battery_optimization_enabled'
+        | 'exact_alarm_unavailable'
+        | 'notification_permission_denied';
     };
 
 export async function ensureAlarmPermissions(): Promise<EnsureAlarmPermissionsResult> {
@@ -189,6 +202,15 @@ export async function ensureAlarmPermissions(): Promise<EnsureAlarmPermissionsRe
   if (!(await canScheduleExactAlarms())) {
     await openExactAlarmSettings();
     return { granted: false, reason: 'exact_alarm_unavailable' };
+  }
+
+  // Some OEM Android skins kill background apps hard enough that even
+  // setAlarmClock (normally exempt from Doze/App Standby) can get swept away
+  // when the app is removed from Recents. Excluding the app from battery
+  // optimization is the standard opt-out for that OEM-level killing.
+  if (!(await isIgnoringBatteryOptimizations())) {
+    await requestIgnoreBatteryOptimizations();
+    return { granted: false, reason: 'battery_optimization_enabled' };
   }
 
   return { granted: true };
