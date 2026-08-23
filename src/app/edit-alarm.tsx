@@ -77,6 +77,7 @@ function getPermissionDeniedMessage(
   reason:
     | 'battery_optimization_enabled'
     | 'exact_alarm_unavailable'
+    | 'full_screen_intent_unavailable'
     | 'notification_permission_denied',
 ): string {
   if (reason === 'notification_permission_denied') {
@@ -85,6 +86,10 @@ function getPermissionDeniedMessage(
 
   if (reason === 'battery_optimization_enabled') {
     return 'バッテリーの最適化を「制限なし」に変更してから、もう一度お試しください。これをしないと、アプリを閉じている間にアラームが鳴らないことがあります。';
+  }
+
+  if (reason === 'full_screen_intent_unavailable') {
+    return '全画面通知の権限を許可してから、もう一度お試しください。';
   }
 
   return '「アラームとリマインダー」の権限を許可してから、もう一度お試しください。';

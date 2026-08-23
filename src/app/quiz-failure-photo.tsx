@@ -4,6 +4,7 @@ import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingIndicator } from '@/components/loading';
 import { ActionButton, challengeStyles } from '@/components/wake-challenge-ui';
+import { recordFailureEvent } from '@/services/failure-log';
 import { recordFailureAccessOutcome } from '@/services/friends-feed-access';
 import { recordQuizFailurePhoto } from '@/services/quiz';
 import { getFailureAccessOutcome } from '@/services/wake-challenge-rules';
@@ -73,6 +74,13 @@ export default function QuizFailurePhotoScreen() {
     }
 
     recordFailureAccessOutcome(failureReason).catch(() => {});
+    recordFailureEvent(failureReason).catch((error) => {
+      console.log(
+        '[DEBUG-fle1] recordFailureEvent failed',
+        failureReason,
+        error,
+      );
+    });
   }, [failureReason, uploadStatus]);
   const actionLabel =
     accessOutcome === 'allowed' ? 'フィードへ進む' : 'アラームへ戻る';

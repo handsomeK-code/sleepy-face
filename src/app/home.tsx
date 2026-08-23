@@ -92,9 +92,13 @@ export default function HomeScreen() {
   useEffect(() => {
     // Best-effort: a failed/denied push token registration must never block or error the
     // Home screen, since the Friends Feed is the fallback delivery path either way.
-    registerPushToken().catch((error: unknown) => {
-      console.warn('[home] push token registration failed', error);
-    });
+    registerPushToken()
+      .then((result) => {
+        console.log('[DEBUG-pt1] registerPushToken result', result);
+      })
+      .catch((error: unknown) => {
+        console.warn('[DEBUG-pt1] push token registration failed', error);
+      });
   }, []);
 
   useEffect(() => {

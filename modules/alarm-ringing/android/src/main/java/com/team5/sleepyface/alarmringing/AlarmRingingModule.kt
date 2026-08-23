@@ -2,6 +2,7 @@ package com.team5.sleepyface.alarmringing
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -38,6 +39,14 @@ class AlarmRingingModule : Module() {
 
     AsyncFunction("requestIgnoreBatteryOptimizations") {
       requestIgnoreBatteryOptimizations()
+    }
+
+    AsyncFunction("canUseFullScreenIntent") {
+      canUseFullScreenIntent()
+    }
+
+    AsyncFunction("openFullScreenIntentSettings") {
+      openFullScreenIntentSettings()
     }
 
     AsyncFunction("getNotificationPermissionStatus") {
@@ -114,6 +123,34 @@ class AlarmRingingModule : Module() {
 
   private fun requestIgnoreBatteryOptimizations() {
     val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+      data = Uri.parse("package:${context.packageName}")
+      addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    context.startActivity(intent)
+  }
+
+  // USE_FULL_SCREEN_INTENT can't be requested via a runtime permission dialog -- it's a
+  // "special app access" toggle the user grants (or was auto-granted on pre-14 devices).
+  // Without it, a full-screen-intent notification just silently degrades to a normal
+  // heads-up notification instead of launching the ringing screen.
+  private fun canUseFullScreenIntent(): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+      return true
+    }
+
+    val notificationManager =
+      context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    return notificationManager.canUseFullScreenIntent()
+  }
+
+  private fun openFullScreenIntentSettings() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+      return
+    }
+
+    val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
       data = Uri.parse("package:${context.packageName}")
       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
