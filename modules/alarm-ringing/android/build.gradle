@@ -20,4 +20,11 @@ dependencies {
   // Pinned to the same version expo-notifications already pulls in, so there is one
   // resolved firebase-messaging version across the app rather than two competing ones.
   implementation 'com.google.firebase:firebase-messaging:25.0.1'
+
+  // AlarmActivationMessagingService is the app's sole FirebaseMessagingService (see its
+  // AndroidManifest.xml comment) and delegates non-alarm-activation pushes to
+  // expo-notifications' own FirebaseMessagingDelegate so existing push behavior isn't lost.
+  // expo-notifications is already on the app's runtime classpath via autolinking, so this
+  // is compile-only to avoid pulling in a second copy of the artifact.
+  compileOnly 'host.exp.exponent:expo.modules.notifications:57.0.13'
 }
