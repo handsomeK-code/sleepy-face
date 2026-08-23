@@ -1,32 +1,33 @@
 package com.team5.sleepyface.alarmringing
 
 import android.app.AlarmManager
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import expo.modules.notifications.service.delegates.FirebaseMessagingDelegate
 import org.json.JSONObject
 import java.time.Instant
 import java.util.UUID
 
 private const val ALARM_ACTIVATION_DATA_TYPE = "alarm-activation"
-private const val PASSIVE_NOTIFICATION_CHANNEL_ID = "sleepyface-remote-push"
-private const val PASSIVE_NOTIFICATION_ID = 61019
 
 // The sole FirebaseMessagingService for this app: expo-notifications registers its own
 // receiving service at intent-filter priority -1 (see its AndroidManifest.xml), so a
 // service declared here at the default priority (0) is the one FCM actually delivers to
-// -- only one FirebaseMessagingService ever receives a given message. That means this
-// class is responsible for both jobs: starting Alarm Ringing directly for an Alarm
-// Activation payload (so it works even with the JS/React Native process fully killed),
-// and posting a plain notification for every other push (e.g. push-on-failure's existing
-// "friend failed" notification) so that existing behavior isn't lost by taking over here.
+// -- only one FirebaseMessagingService ever receives a given message, and only one gets
+// onNewToken/onDeletedMessages callbacks. That means this class is responsible for both
+// jobs: starting Alarm Ringing directly for an Alarm Activation payload (so it works even
+// with the JS/React Native process fully killed), and otherwise behaving exactly like
+// expo-notifications' own ExpoFirebaseMessagingService -- by delegating to the same
+// FirebaseMessagingDelegate it uses internally -- so existing push behavior (channel
+// config, tap handling, JS-side listeners, token refresh) isn't lost by taking over here.
 class AlarmActivationMessagingService : FirebaseMessagingService() {
+  private val firebaseMessagingDelegate: FirebaseMessagingDelegate by lazy {
+    FirebaseMessagingDelegate(this)
+  }
+
   override fun onMessageReceived(remoteMessage: RemoteMessage) {
     super.onMessageReceived(remoteMessage)
 
@@ -37,7 +38,17 @@ class AlarmActivationMessagingService : FirebaseMessagingService() {
       return
     }
 
-    showPassiveNotification(remoteMessage)
+    firebaseMessagingDelegate.onMessageReceived(remoteMessage)
+  }
+
+  override fun onNewToken(token: String) {
+    super.onNewToken(token)
+    firebaseMessagingDelegate.onNewToken(token)
+  }
+
+  override fun onDeletedMessages() {
+    super.onDeletedMessages()
+    firebaseMessagingDelegate.onDeletedMessages()
   }
 
   // Expo's Android push payload format (see expo-notifications' own NotificationData.kt)
@@ -85,43 +96,5 @@ class AlarmActivationMessagingService : FirebaseMessagingService() {
     )
 
     alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
-  }
-
-  private fun showPassiveNotification(remoteMessage: RemoteMessage) {
-    val title = remoteMessage.notification?.title ?: remoteMessage.data["title"]
-    val body = remoteMessage.notification?.body ?: remoteMessage.data["message"]
-
-    if (title == null && body == null) {
-      return
-    }
-
-    createPassiveNotificationChannel()
-
-    val notification = NotificationCompat.Builder(this, PASSIVE_NOTIFICATION_CHANNEL_ID)
-      .setSmallIcon(applicationInfo.icon)
-      .setContentTitle(title)
-      .setContentText(body)
-      .setAutoCancel(true)
-      .build()
-
-    val notificationManager =
-      getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    notificationManager.notify(PASSIVE_NOTIFICATION_ID, notification)
-  }
-
-  private fun createPassiveNotificationChannel() {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-      return
-    }
-
-    val channel = NotificationChannel(
-      PASSIVE_NOTIFICATION_CHANNEL_ID,
-      "Sleepy Face",
-      NotificationManager.IMPORTANCE_DEFAULT,
-    )
-
-    val notificationManager =
-      getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    notificationManager.createNotificationChannel(channel)
   }
 }

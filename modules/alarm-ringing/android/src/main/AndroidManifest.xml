@@ -33,7 +33,9 @@
          service, which registers at a lower priority (see its AndroidManifest.xml).
          Firebase Messaging only ever delivers to one FirebaseMessagingService, so this
          one wins and is responsible for handling every push, not just alarm-activation
-         ones. -->
+         ones. It delegates non-alarm-activation pushes to expo-notifications'
+         FirebaseMessagingDelegate so existing behavior (channel config, tap handling,
+         JS listeners, token refresh) is preserved; see AlarmActivationMessagingService. -->
     <service
       android:name=".AlarmActivationMessagingService"
       android:exported="false">
