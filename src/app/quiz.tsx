@@ -8,6 +8,7 @@ import {
   formatRemainingTime,
   getRemainingMs,
 } from '@/components/wake-challenge-ui';
+import { useQuizAnswerFeedback } from '@/components/quiz-answer-feedback';
 import { resumeTimer, useAlarmTimer } from '@/services/alarm-timer';
 import { getDevMode } from '@/services/dev-mode';
 import {
@@ -68,6 +69,8 @@ export default function QuizScreen() {
     localPhotoUri?: string;
   }>();
   const timer = useAlarmTimer();
+  const { playCorrectAnswerFeedback, playIncorrectAnswerFeedback } =
+    useQuizAnswerFeedback();
   const [quizState, setQuizState] = useState<QuizState>(() => startQuiz());
   const [answerText, setAnswerText] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -144,6 +147,12 @@ export default function QuizScreen() {
       const nextState = submitQuizAnswer(answerText);
       setQuizState(nextState);
       setAnswerText('');
+
+      if (nextState.lastAnswerCorrect) {
+        playCorrectAnswerFeedback();
+      } else {
+        playIncorrectAnswerFeedback();
+      }
 
       if (nextState.status === 'completed') {
         router.replace('/quiz-success');
