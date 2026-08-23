@@ -2,9 +2,11 @@
 
 ## Purpose
 
-This document defines the current frontend/backend contract for Supabase Auth, app tables, and RPC functions.
+This document defines the current frontend/backend contract for Supabase Auth, app tables, Storage, and RPC functions as of 2026-08-23.
 
-The current backend contract covers Google Login, Initial Setup Profile creation, simple photo records, failure photo Storage upload, and friend relations. Wake Up Challenge attempt persistence, final Failure Card tables, and Friends Feed Access are deferred.
+The current contract covers Google Login/logout, Profile creation and update, custom Profile photos, simple failure-photo records, friend relations, Friends Feed reads, reactions, comments, Push Token registration, and the optional failure-notification Edge Function. Wake Challenge Attempt and Friends Feed Access are implemented locally on the device; final server-side Daily Attempt/Failure Card persistence remains deferred.
+
+For screen behavior, platform limits, and current implementation gaps, see [`current_implementation_spec.md`](./current_implementation_spec.md).
 
 ## Overall Rules
 
@@ -79,7 +81,10 @@ supabase.auth.signInWithOAuth({
   provider: "google",
   options: {
     redirectTo: "sleepyface://google-auth",
-    skipBrowserRedirect: true
+    skipBrowserRedirect: true,
+    queryParams: {
+      prompt: "select_account"
+    }
   }
 });
 ```
@@ -101,6 +106,20 @@ Rules:
 - The MVP uses Supabase OAuth-only for Google Login, not native Google Sign-In or `signInWithIdToken`.
 - The callback redirect URL `sleepyface://google-auth` must be allow-listed in Supabase Auth.
 - Google provider tokens are not stored by the frontend in the MVP.
+
+### Sign Out
+
+Frontend call:
+
+```ts
+supabase.auth.signOut();
+```
+
+Rules:
+
+- Sign Out is available from the Settings screen.
+- On success, the app replaces the current route with `/signin`.
+- Device-local Saved Alarms, Wake Challenge day markers, Friends Feed Access state, cached challenge photos, and Dev Mode are not cleared or namespaced by Auth User ID.
 
 ### Get Current Auth User
 
@@ -164,8 +183,9 @@ Rules:
 - `profile_id` is the Auth User ID.
 - `user_id` is the public User ID and must be unique.
 - `display_name` is required.
-- `icon_id` must be one of the 8 known preset icon identifiers (`human`, `man`, `man2`, `woman`, `boy`, `child`, `old-man`, `grandmother`); it is stored as-is in `icon_url`, which despite its column name holds a preset identifier rather than an arbitrary image URL.
-- Public User ID, Display Name, and the chosen icon cannot be edited after setup in the MVP.
+- `icon_id` passed to the RPC must be one of the 8 known preset icon identifiers (`human`, `man`, `man2`, `woman`, `boy`, `child`, `old-man`, `grandmother`).
+- If Initial Setup selected a custom photo URL, the client creates the row with a preset fallback and then updates `profiles.icon_url` through the Profile Update path.
+- Public User ID cannot be edited. Display Name and Profile Icon can be edited from Settings.
 
 ### Get My Profile
 
@@ -178,7 +198,7 @@ Frontend call:
 ```ts
 supabase
   .from("profiles")
-  .select("id, user_id, display_name, created_at")
+  .select("id, user_id, display_name, icon_url, created_at")
   .eq("id", user.id)
   .maybeSingle();
 ```
@@ -190,9 +210,59 @@ Data:
   id: string;
   user_id: string;
   display_name: string;
+  icon_url: string;
   created_at: string;
 }
 ```
+
+`icon_url` contains either a preset identifier or a full custom-photo URL.
+
+### Update My Profile
+
+Supabase feature:
+
+- Postgres table update
+
+Frontend call shape:
+
+```ts
+supabase
+  .from("profiles")
+  .update({
+    display_name: string,
+    icon_url: string
+  })
+  .eq("id", user.id)
+  .select("id, user_id, display_name, icon_url, created_at")
+  .single();
+```
+
+Rules:
+
+- The client trims Display Name, requires a non-empty value, and limits it to 30 Unicode characters.
+- `icon_url` can be a known preset ID or a custom Storage public URL.
+- Public User ID is not part of the update payload.
+- The deployed `profiles` RLS must permit an authenticated user to update their own row. That base policy SQL is not checked into this repository.
+
+### Upload Custom Profile Icon
+
+Supabase feature:
+
+- Storage upload/upsert and public URL lookup
+
+Current frontend service:
+
+```ts
+uploadProfileIconPhoto(localPhotoUri: string, contentType?: string);
+```
+
+Rules:
+
+- Requires an authenticated user and photo-library permission at the picker layer.
+- The image picker uses square editing and quality 0.8.
+- Upload path is `{Auth User ID}/icon.{extension derived from content type}` in `profile-icon-photos`.
+- Upload uses `upsert: true` and returns a public URL with a timestamp query parameter for cache busting.
+- The caller writes the returned URL to `profiles.icon_url`; uploading by itself does not update the Profile row.
 
 ## Photo API
 
@@ -268,7 +338,8 @@ supabase
 
 Rules:
 
-- Current policies allow users to read their own photo records.
+- The client queries only the authenticated user's rows on the Profile screen.
+- The deployed policy must allow that own-photo read.
 - This table is a simple photo record table, not the final Failure Card model.
 
 ### Add My Photo
@@ -288,7 +359,31 @@ supabase.from("photos").insert({
 
 Rules:
 
-- Current policies allow users to insert only their own photo records.
+- The client inserts only the authenticated user's own photo records.
+- The deployed policy must reject a different `profile_id`.
+
+### List Friends Feed Photos
+
+Frontend service:
+
+```ts
+listFriendsFeed();
+```
+
+Behavior:
+
+1. Resolve all relation rows where the viewer is either side.
+2. Derive the other Profile ID from each relation.
+3. Read those Profiles' `photos`, newest first.
+4. Read Profile display/icon data.
+5. Read all reactions and comments for the returned photo IDs.
+6. Return reaction counts, whether the viewer reacted, and comment counts.
+
+Rules:
+
+- The deployed `photos` SELECT policy must allow the Friend-photo read path; its base SQL is not checked into this repository.
+- `photos` is a simple record table, so the service treats all Friend photos as feed-visible failure records.
+- Friends Feed Access is checked by a device-local service before this API is called; it is not enforced by the backend.
 
 ## Friend Relation API
 
@@ -300,7 +395,7 @@ Supabase feature:
 
 Frontend behavior:
 
-- Search Profiles by public User ID or Display Name.
+- Search Profiles by public User ID.
 - Exclude the current user's own Profile from results.
 - Return public profile fields needed by the add-friend screen.
 
@@ -312,10 +407,11 @@ searchProfiles(query: string);
 
 Rules:
 
-- Users search by public User ID or Display Name.
-- Public User ID search is prefix-oriented.
-- Display Name search is partial-match-oriented.
-- Current policies allow authenticated users to read Profiles for Friend Search.
+- The normalized query must contain at least two characters.
+- Public User ID search is case-insensitive and prefix-oriented.
+- Results exclude the current Profile and are limited to 20.
+- Display Name search is not implemented.
+- Current client requirements assume authenticated users can read Profiles for Friend Search.
 
 ### List My Friend Relations
 
@@ -334,7 +430,7 @@ supabase
 
 Rules:
 
-- Current policies allow users to read friend relation rows where they are either side.
+- The deployed policy must allow users to read friend relation rows where they are either side.
 
 ### Add Friend Relation
 
@@ -353,16 +449,78 @@ supabase.from("friends_relations").insert({
 
 Rules:
 
-- Current policies allow users to insert relation rows only from their own Profile.
+- The deployed policy must allow users to insert relation rows only from their own Profile.
 - The database rejects self-relations.
 - The database rejects duplicate `(profile_id, friend_profile_id)` rows.
 
+## Photo Reaction API
+
+Frontend services:
+
+```ts
+addPhotoReaction(photoId: string);
+removePhotoReaction(photoId: string);
+```
+
+Rules:
+
+- 😂 is the only supported reaction type; no emoji value is stored.
+- Add upserts `(photo_id, profile_id)` and ignores duplicates.
+- Remove deletes only the authenticated Profile's row for the specified photo.
+- The database unique constraint enforces one row per `(photo_id, profile_id)`.
+- Repository SQL allows all authenticated users to read reaction rows and users to insert/delete only their own.
+
+## Comment API
+
+Frontend services:
+
+```ts
+listComments(photoId: string);
+addComment(photoId: string, content: string);
+```
+
+Rules:
+
+- Comments are returned oldest first with commenter Profile data.
+- The client trims content and rejects an empty result. It does not enforce a maximum length.
+- Insert sets `user_id` to the authenticated Profile and leaves `parent_comment_id` null.
+- Replies, update, and delete are not implemented.
+- Repository SQL allows all authenticated users to read comments and users to insert only their own.
+
+## Push Token API
+
+Frontend service:
+
+```ts
+registerPushToken();
+```
+
+Rules:
+
+- If notification permission is undetermined, the client requests it. A prior grant or denial is otherwise respected.
+- If permission is not granted, registration returns `skipped` without requesting a token.
+- The Expo Push Token is upserted into `push_tokens` with `onConflict: "token"`.
+- An existing installation token is reassigned to the currently authenticated Profile.
+- Home treats registration as best-effort and does not surface registration failure to the user.
+
+## Failure Notification Edge Function
+
+`supabase/functions/push-on-failure` accepts an externally configured `photos` INSERT Webhook.
+
+Rules:
+
+- Requests must include the configured `x-webhook-secret`.
+- The function resolves both sides of `friends_relations`, loads Friend Push Tokens with the Service Role, and sends one Expo Push message per token.
+- Notification title is the failed Profile's Display Name; body is `failed their wake-up challenge 😴`.
+- The checked-in code does not deploy the function or create the Database Webhook. Supabase secrets and deployment are external setup steps.
+- The message has no photo ID/deep-link data payload.
+
 ## Deferred APIs
 
-The following APIs from the larger product model are deferred until their backend tables exist:
+The following server APIs from the larger product model are deferred until their backend tables exist:
 
 - Daily Alarm Attempt API
 - Challenge Result API
 - Failure Card API
-- Friends Feed Access API
+- Account-scoped/server-enforced Friends Feed Access API. Current access state is device-local.
 - Failure photo Storage policies tied to Failure Cards

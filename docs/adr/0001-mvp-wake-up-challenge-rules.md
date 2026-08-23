@@ -1,5 +1,9 @@
 # MVP Wake-Up Challenge Rules
 
+## Implementation Status (2026-08-23)
+
+This ADR records the target decision. The current implementation differs in several places: starting the challenge resets the timer to 180 seconds, no separate two-minute Photo Timer exists, Challenge Success does not clear a same-day feed block, Friend Search is public-User-ID-only, and the Offline Page/active-offline handling are not implemented. See [`../current_implementation_spec.md`](../current_implementation_spec.md) for the implemented behavior.
+
 The MVP treats the Wake Up Challenge as successful only when the user completes the full proof sequence: respond to the alarm, provide Face Proof through a selfie, and complete the quiz. The 3-minute challenge timer starts when the alarm goes off, pauses during Face Verification, and resumes when the Quiz starts. Quiz success means answering three two-digit addition or subtraction questions correctly before the timer expires. Quiz Failure uploads the captured photo as a non-removable Failure Card visible only to friends and allows Friends Feed Access, while timeout failure, three-bad-photo failure, and active-offline failure block Friends Feed Access for the rest of the user's current local day.
 
 Saved Alarms repeat by selected day of week, and overlapping days across Saved Alarms are blocked to preserve one Daily Alarm Attempt per local day. The MVP uses Google Login, then Initial Setup collects a user-chosen public user ID and display name. The public user ID is separate from Supabase Auth's internal UUID. The MVP includes direct mutual friend adding by public user ID or display-name search and does not include friend requests. The universal Offline Page blocks all app functions while offline; if the app is offline at a scheduled alarm time no attempt starts, but if it goes offline during an active alarm/challenge the active attempt fails.

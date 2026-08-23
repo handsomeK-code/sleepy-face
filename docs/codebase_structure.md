@@ -2,55 +2,54 @@
 
 ## Purpose
 
-This document describes the intended codebase structure for the Expo app.
+This document describes the current repository structure as of 2026-08-23. For the complete behavior implemented by these files, see [`current_implementation_spec.md`](./current_implementation_spec.md).
 
-It is based on the initial `alarm-app/src/` structure proposal, adjusted to match the current MVP scope and technical docs.
-
-## Current Repo Root
+## Repository Root
 
 The app repository root is `sleepy-face/`.
 
-Important root files and folders:
-
 ```text
 sleepy-face/
-├── src/
 ├── assets/
 ├── docs/
+├── modules/
+├── plugins/
+├── src/
+├── supabase/
 ├── app.json
+├── eas.json
 ├── package.json
-└── tsconfig.json
+├── tsconfig.json
+└── vitest.config.mts
 ```
 
-## Proposed App Structure
+| path | responsibility |
+| --- | --- |
+| `src/app/` | Expo Router screens and route-level orchestration |
+| `src/components/` | Reusable UI, navigation, loading, and Wake Challenge components |
+| `src/constants/` | Alarm sound and Profile Icon registries |
+| `src/lib/` | Shared external-service clients |
+| `src/services/` | Auth, persistence, Supabase, quiz, feed, and native-module boundaries |
+| `modules/` | Local Expo Native Modules for Android alarm mechanics and face detection |
+| `plugins/` | Expo config plugins |
+| `supabase/` | Incremental SQL, migrations, and Edge Functions |
+| `assets/` | App images, Profile Icons, and bundled alarm sounds |
+| `docs/` | Product, technical, architecture, and implementation documentation |
 
-```text
-src/
-├── app/
-├── services/
-├── lib/
-├── utils/
-└── modules/
-```
-
-Static app assets stay in the existing root-level `assets/` folder unless the team decides to move assets under `src/`.
-
-Native Android project files should exist only after the app is prebuilt or a custom native module requires them.
+There is no current `src/utils/` or `src/modules/` directory. Native modules live at the repository-level `modules/` path.
 
 ## `src/app/`
 
-`src/app/` contains screens and routing managed by Expo Router.
-
-Proposed files:
+`src/app/` contains the current Expo Router routes.
 
 ```text
 src/app/
 ├── _layout.tsx
 ├── index.tsx
-├── login.tsx
+├── signin.tsx
+├── signup.tsx
+├── google-auth.tsx
 ├── profile-setup.tsx
-├── home.tsx
-├── add-friend.tsx
 ├── alarms.tsx
 ├── add-alarm.tsx
 ├── edit-alarm.tsx
@@ -61,176 +60,124 @@ src/app/
 ├── quiz.tsx
 ├── quiz-success.tsx
 ├── quiz-failure.tsx
-└── offline.tsx
+├── quiz-failure-photo.tsx
+├── home.tsx
+├── photo-detail.tsx
+├── friends.tsx
+├── add-friend.tsx
+├── profile.tsx
+├── dev-menu.tsx
+├── alarm-ring-test.tsx
+└── timer-test.tsx
 ```
 
-Screen responsibilities:
+Important route responsibilities:
 
 | file | responsibility |
 | --- | --- |
-| `_layout.tsx` | Configure Expo Router layout, route stack, and authenticated navigation state. |
-| `index.tsx` | Initial entry screen. Decide whether to show login, Initial Setup, Home, or Offline Page. |
-| `login.tsx` | Google Login screen using Supabase Auth. |
-| `profile-setup.tsx` | First-time profile setup for public User ID and Display Name. |
-| `home.tsx` | Main app entry after Initial Setup. Alarm is the default Home area. |
-| `add-friend.tsx` | Search by public User ID or Display Name, list existing Friends, and add a mutual Friend. |
-| `alarms.tsx` | List Saved Alarms, show time/repeat/ON-OFF state, toggle local ON/OFF state, and navigate to create/edit flows. |
-| `add-alarm.tsx` | Create a new Saved Alarm with time and selected weekdays. |
-| `edit-alarm.tsx` | Edit or delete an existing Saved Alarm. |
-| `ringing.tsx` | Show the active ringing alarm and start the Wake Up Challenge. |
-| `face-check.tsx` | Capture a selfie, save the latest captured photo locally, run Android Face Proof with ML Kit for device testing, and upload an accepted photo through the current simple photo-record path. |
-| `face-check-success.tsx` | Show Face Verification success and proceed to Quiz. |
-| `face-check-failure.tsx` | Show Face Verification failure and return to retake flow. |
-| `quiz.tsx` | Ask arithmetic Quiz Questions and track correct answers and timer state. |
-| `quiz-success.tsx` | Show Challenge Success after Quiz Completion. |
-| `quiz-failure.tsx` | Show Quiz Failure and trigger Failure Card creation when applicable. |
-| `offline.tsx` | Universal Offline Page that blocks app usage while offline. |
+| `_layout.tsx` | Route stack, Auth/Profile gate, abandoned Wake Challenge detection, and Android boot-resync task registration |
+| `signin.tsx` / `google-auth.tsx` | Google OAuth start and callback loading state |
+| `profile-setup.tsx` | Initial Profile creation, preset icon selection, and custom Profile photo upload |
+| `alarms.tsx` | Saved Alarm list, ON/OFF, next-occurrence status, and development alarm controls |
+| `add-alarm.tsx` / `edit-alarm.tsx` | Alarm time, weekday, and sound configuration; edit also deletes |
+| `ringing.tsx` | Native ringing-state lookup, Alarm Timer start, and Wake Challenge Attempt start |
+| `face-check*.tsx` | Camera capture, local photo save, Android Face Proof, retry/failure count, and Quiz countdown |
+| `quiz*.tsx` | Arithmetic Quiz, success/failure routing, failure-photo upload, and feed-access outcome |
+| `home.tsx` | Friends Feed, local feed-access block, reactions, comments entry, and push-token registration |
+| `photo-detail.tsx` | Photo detail, reaction toggle, and oldest-first comments |
+| `friends.tsx` / `add-friend.tsx` | Friend list, public User ID search, and direct add |
+| `profile.tsx` | Profile editing, custom icon photo, logout, own failure photos, and Dev Mode entry |
+| `signup.tsx` | Placeholder only; no sign-up implementation |
+| `dev-menu.tsx` / `alarm-ring-test.tsx` / `timer-test.tsx` | Development and manual verification surfaces |
+
+There is no `offline.tsx`; universal offline handling is not implemented.
 
 ## `src/services/`
 
-`src/services/` contains app-facing operations that interact with persistence, Supabase, native modules, or platform APIs.
+Current service groups:
 
-This folder is optional for tiny features, but it should be used when screen files would otherwise contain backend or platform details directly.
+| group | files | responsibility |
+| --- | --- | --- |
+| Auth/Profile | `auth.ts`, `user.ts`, `profile-icon-photo.ts`, `profile-photos.ts`, `push-token.ts` | Supabase Auth, Profile validation and updates, Profile images, own photos, Push Token registration |
+| Alarm | `alarm.ts`, `android-alarm-mechanics.ts`, `alarm-sound-preview.ts`, `alarm-timer.ts` | Local Saved Alarms, native scheduling, sound previews, in-memory challenge timer |
+| Wake Challenge | `wakeChallenge.ts`, `wake-challenge-attempt.ts`, `wake-challenge-rules.ts`, `face-proof.ts`, `quiz.ts`, `quiz-keypad.ts` | Local photo persistence, active attempt, failure rules, Android face detector boundary, Quiz state |
+| Social | `friend.ts`, `home-feed.ts`, `friends-feed-access.ts`, `photo-reactions.ts`, `comments.ts` | Friend relations/search, Friends Feed reads, local access block, reactions, comments |
+| Development | `dev-mode.ts` | Device-local Dev Mode flag |
 
-Proposed files:
+Service tests live in `src/services/__tests__/` and use Vitest.
 
-```text
-src/services/
-├── alarm.ts
-├── auth.ts
-├── user.ts
-├── friend.ts
-├── face-proof.ts
-├── quiz.ts
-└── wakeChallenge.ts
-```
-
-Service responsibilities:
-
-| file | responsibility |
-| --- | --- |
-| `alarm.ts` | Saved Alarm create/list/update/delete, ON/OFF toggle persistence, next alarm calculation, local scheduling, and native alarm module calls. |
-| `auth.ts` | Supabase OAuth-only Google Login, browser auth-session lifecycle, Auth User ID lookup, and auth-state subscription. |
-| `face-proof.ts` | TypeScript boundary for Android local Face Proof, mapping native ML Kit face-detection results into stable passed/failed proof results. |
-| `user.ts` | Initial Setup Profile lookup and Profile creation with public User ID and Display Name. |
-| `friend.ts` | Profile search, add Friend, and list Friends. |
-| `quiz.ts` | Service-only Quiz Question generation, answer checking, Quiz Progress and Quiz Attempt Number tracking, and current-schema quiz-failure photo recording. |
-| `wakeChallenge.ts` | Captured-photo local persistence, latest local photo lookup, Supabase Storage upload, and simple `photos` record creation. Daily Alarm Attempt and final Failure Card creation are later slices. |
-
-## `src/lib/`
-
-`src/lib/` contains shared setup for external services and app-wide clients.
-
-Proposed files:
-
-```text
-src/lib/
-└── supabase.ts
-```
-
-Responsibilities:
-
-| file | responsibility |
-| --- | --- |
-| `supabase.ts` | Create and export the Supabase client used by services, including secure mobile auth storage. |
-
-## `src/utils/`
-
-`src/utils/` contains small pure utilities that do not depend on Supabase, native modules, or screen state.
-
-Proposed files:
-
-```text
-src/utils/
-└── quiz.ts
-```
-
-Responsibilities:
-
-| file | responsibility |
-| --- | --- |
-| `quiz.ts` | Generate two-digit addition and subtraction Quiz Questions. |
-
-## `src/modules/`
-
-`src/modules/` is reserved for custom Expo Native Modules.
-
-Proposed module:
-
-```text
-src/modules/
-└── expo-alarm/
-    ├── android/
-    │   └── src/
-    ├── src/
-    ├── expo-module.config.json
-    └── package.json
-```
-
-Responsibilities:
+## `src/components/` and `src/constants/`
 
 | path | responsibility |
 | --- | --- |
-| `expo-alarm/` | Custom native alarm capability if Expo libraries are not enough for MVP alarm behavior. |
-| `expo-alarm/android/src/` | Android native implementation, likely Kotlin, for alarm behavior. |
-| `expo-alarm/src/` | TypeScript wrapper used by the app. |
-| `expo-module.config.json` | Expo Module configuration. |
-| `package.json` | Module package metadata. |
+| `src/components/bottom-nav.tsx` | Four-tab bottom navigation |
+| `src/components/loading.tsx` | Loading states and buttons |
+| `src/components/loading-skeletons.tsx` | Feed, Alarm, Friend, and Profile skeletons |
+| `src/components/wake-challenge-ui.tsx` | Shared challenge controls, timer formatting, 180-second and three-attempt constants |
+| `src/components/comment-bubble-icon.tsx` | Comment icon |
+| `src/constants/alarm-sounds.ts` | Four Alarm Sound IDs and labels |
+| `src/constants/profile-icons.ts` | Preset icon assets and custom-photo source resolution |
 
-## `assets/`
+## Native Modules
 
-The existing `assets/` folder stores static files used by the app.
+### `modules/alarm-ringing/`
 
-Proposed structure:
+Local Expo Module named `AndroidAlarmMechanics`.
+
+- Schedules exact saved/test alarms through `AlarmManager.setAlarmClock`.
+- Uses a BroadcastReceiver and foreground service to ring outside the React Native process.
+- Plays the selected bundled sound or a device ringtone fallback.
+- Opens `/ringing` through a full-screen notification and deep link.
+- Stops automatically after 180 seconds.
+- Re-registers enabled alarms after Android boot through Headless JS.
+
+### `modules/android-face-proof/`
+
+Local Expo Module named `AndroidFaceProof`.
+
+- Reads a local `file://` image.
+- Runs Google ML Kit Face Detection in fast mode.
+- Passes when at least one face is detected.
+- Does not identify the user or perform liveness/biometric verification.
+
+Both modules require a rebuilt Android development/production app and are unavailable in Expo Go, iOS, and web.
+
+## `supabase/`
 
 ```text
-assets/
-├── images/
-│   ├── logo.png
-│   └── default-avatar.png
-└── sounds/
-    └── alarm.mp3
+supabase/
+├── functions/
+│   └── push-on-failure/
+├── migrations/
+│   └── 20260821073529_create_push_tokens.sql
+├── sql/
+│   ├── 2026-08-21_profile_icon_photos_bucket.sql
+│   ├── 2026-08-22_comments.sql
+│   └── 2026-08-22_photo_reactions.sql
+└── README.md
 ```
 
-Responsibilities:
+- `migrations/` currently contains the `push_tokens` table and RLS policies.
+- `sql/` contains manual SQL for Profile Icon Storage, comments, and reactions.
+- `functions/push-on-failure/` contains the Deno Edge Function that sends Expo Push notifications after externally configured `photos` INSERT webhooks.
+- The base schema for `profiles`, `photos`, `friends_relations`, `failure-photos`, and `create_profile` is not checked into this repository.
+
+## Assets and Configuration
 
 | path | responsibility |
 | --- | --- |
-| `assets/images/` | Logos, default images, app icons, and other image files. |
-| `assets/sounds/` | Alarm sounds and other local audio files. |
+| `assets/images/profile-icons/` | Eight attributed preset Profile Icons |
+| `assets/sounds/` | Three previewable custom Alarm Sound WAV files |
+| `modules/alarm-ringing/android/src/main/res/raw/` | Native copies of the custom Alarm Sounds |
+| `app.json` | Expo app identity, `sleepyface` scheme, plugins, Android/iOS IDs, permissions |
+| `plugins/with-android-alarm-mechanics.js` | Enables Android lock-screen display and screen wake for the main Activity |
+| `google-services.json` | Android Google/Firebase service configuration |
+| `eas.json` | EAS build configuration |
 
-## Root Native And Config Files
+## Current Architectural Boundaries
 
-Proposed root-level files:
-
-```text
-android/
-.env
-.gitignore
-app.json
-package.json
-tsconfig.json
-```
-
-Responsibilities:
-
-| path | responsibility |
-| --- | --- |
-| `android/` | Android native project generated by prebuild or required for custom native alarm work. |
-| `.env` | Local environment variables such as Supabase URL and anon key. Do not commit secrets. |
-| `.gitignore` | Files ignored by Git. |
-| `app.json` | Expo app configuration. |
-| `package.json` | Dependencies and npm scripts. |
-| `tsconfig.json` | TypeScript configuration. |
-
-## Differences From The Initial Sketch
-
-The initial sketch included several items that do not match the current MVP scope. Use the adjusted structure above instead.
-
-| initial sketch item | current MVP direction |
-| --- | --- |
-| `signin.tsx` and `signup.tsx` for email auth | Use `login.tsx` for Google Login through Supabase Auth. Email/password auth is out of scope. |
-| Alarm ON/OFF behavior | Implemented for Saved Alarms as local `isEnabled` state. |
-| Logout in `auth.ts` | Out of scope for MVP docs. Add only if the product scope changes. |
-| Home showing "sleeping face" wording | Use Friends Feed and Failure Card terminology. |
-| Generic photo publishing | Current camera flow uploads simple captured-photo records. Final Failure Card publishing remains tied to Quiz Failure in a later backend slice. |
+- Saved Alarm schedules, Daily Alarm day markers, Wake Challenge Attempt state, Friends Feed Access, and Dev Mode are device-local and are not scoped by Auth User ID.
+- Alarm Timer and Quiz session state are JavaScript in-memory state.
+- Supabase stores Profiles, simple photo records, friend relations, social interactions, and Push Tokens.
+- `photos` remains a simple record and is not a structured `failure_cards` model.
+- Offline detection and a universal Offline Page remain unimplemented.
