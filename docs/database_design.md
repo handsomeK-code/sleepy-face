@@ -2,9 +2,11 @@
 
 ## Purpose
 
-This document records the current Supabase Postgres schema for the app.
+This document records the database/storage contract required by the current app as of 2026-08-23.
 
-The current online Supabase setup is intentionally smaller than the full product model. It supports Google Login, Initial Setup, simple photo records, and friend relations. Wake Up Challenge attempt tracking and Failure Card-specific persistence are deferred.
+The current Supabase model is intentionally smaller than the full product model. It supports Google Login, editable Profiles, simple photo records, friend relations, photo reactions, comments, and Push Tokens. Wake Challenge Attempt and Friends Feed Access state are implemented locally on the device; server-side attempt tracking and Failure Card-specific persistence are deferred.
+
+The repository does not contain a reproducible base migration for `profiles`, `photos`, `friends_relations`, `failure-photos`, or `create_profile`. The sections below describe the contract used by the client, while `supabase/migrations/` and `supabase/sql/` contain only incremental/manual changes. See [`current_implementation_spec.md`](./current_implementation_spec.md) for the complete implementation inventory.
 
 ## Main Decisions
 
@@ -14,10 +16,14 @@ The current online Supabase setup is intentionally smaller than the full product
 - Use `profiles` for app profile data tied one-to-one to `auth.users`.
 - Use `display_name` in code and docs instead of `username`.
 - Keep `user_id` as the public immutable User ID for Friend Search.
-- Keep `icon_url` as the profile icon field; it stores one of the 8 known preset icon identifiers (`human`, `man`, `man2`, `woman`, `boy`, `child`, `old-man`, `grandmother`) chosen during Initial Setup, not an arbitrary uploaded image URL.
+- Keep `icon_url` as the profile icon field; it stores either one of the 8 known preset icon identifiers (`human`, `man`, `man2`, `woman`, `boy`, `child`, `old-man`, `grandmother`) chosen during Initial Setup, or a custom photo's full Storage URL chosen from the photo library (both during Initial Setup and from the Profile screen). `create_profile` still only accepts a preset identifier; a custom photo is written afterward through a direct `profiles` update.
 - Use simple `photos` records for uploaded image URLs in the current schema.
 - Use `friends_relations` for directional friend relation rows in the current schema.
 - Use Supabase Storage bucket `failure-photos` for the current simple captured-photo upload flow.
+- Use Supabase Storage bucket `profile-icon-photos` for custom profile icon photo uploads.
+- Use `photo_reactions` and `comments` for current Friends Feed interactions.
+- Use `push_tokens` for one Expo Push Token per app installation token, reassigned to the currently authenticated Profile on upsert.
+- Keep Wake Challenge Attempt, last-attempt local day, and Friends Feed Access block in device-local storage for the current implementation.
 - Defer `daily_attempts`, `failure_cards`, canonical `friendships`, feed access persistence, and final Failure Card-specific storage rules until the Wake Up Challenge backend is implemented.
 
 ## Tables
@@ -31,7 +37,7 @@ One row per authenticated app user. The row ID is the Auth User ID from Supabase
 | `id`         | uuid        | primary key, references `auth.users(id)`               |
 | `user_id`    | varchar     | unique public User ID used for Friend Search           |
 | `display_name` | varchar  | required public Display Name                           |
-| `icon_url`   | varchar     | required preset Profile Icon identifier (not a URL)    |
+| `icon_url`   | varchar     | required; a preset Profile Icon identifier or a custom photo's Storage URL |
 | `created_at` | timestamptz | default `now()`                                        |
 
 Rules:
@@ -40,7 +46,8 @@ Rules:
 - `profiles.user_id` is the public User ID.
 - `profiles.user_id` must not be confused with the Auth User ID.
 - A user can create only their own Profile.
-- Public User ID and Display Name are immutable for the MVP.
+- Public User ID is immutable in the current app.
+- Display Name and `icon_url` are editable from the Settings screen, so the deployed RLS must allow an authenticated user to update their own row.
 
 ### photos
 
@@ -55,8 +62,9 @@ Simple image records associated with a Profile.
 
 Rules:
 
-- Users can read and insert only their own photo records in the current policy set.
-- This table is not yet the final Failure Card model.
+- The current app inserts only the authenticated user's own photo records.
+- Profile reads the current user's rows; Friends Feed reads rows whose `profile_id` belongs to a Friend. The deployed `photos` SELECT policy must support this friend-read path.
+- `photos` does not store a failure reason, Alarm ID, Daily Attempt, visibility state, or upload outcome; it is not a final Failure Card model.
 
 ### failure-photos Storage
 
@@ -67,6 +75,16 @@ Rules:
 - Captured photos are uploaded under a path scoped by the current Auth User ID.
 - The app stores the public URL in `photos.image_url`.
 - This bucket supports the current simple photo records and is not yet the final Failure Card storage model.
+
+### profile-icon-photos Storage
+
+Storage bucket used by the custom profile icon photo picker (Initial Setup and the Profile screen).
+
+Rules:
+
+- Uploaded under a path scoped by the current Auth User ID (`{authUserId}/icon.{contentTypeExtension}`, upserted when the same path is reused).
+- The app stores the public URL directly in `profiles.icon_url`.
+- Publicly readable, same as `failure-photos`, since friends need to see it in the feed and Friend Search.
 
 ### friends_relations
 
@@ -83,8 +101,65 @@ Rules:
 
 - `profile_id` and `friend_profile_id` cannot be the same Profile.
 - `(profile_id, friend_profile_id)` is unique.
-- The current policy allows a user to insert relations only from their own Profile.
-- The current policy allows a user to read relations where they are either side of the relation.
+- The client contract requires users to insert relations only from their own Profile.
+- The deployed policy must allow a user to read relations where they are either side of the relation.
+
+### photo_reactions
+
+A single 😂 reaction a Profile can toggle on a friend's photo from the Home feed. Not a
+multi-emoji picker, and not the Comments feature (table design owned separately).
+
+| column name  | type        | constraints / memo                          |
+| ------------ | ----------- | -------------------------------------------- |
+| `id`         | uuid        | primary key, default `gen_random_uuid()`     |
+| `photo_id`   | uuid        | references `photos(id)`                      |
+| `profile_id` | uuid        | references `profiles(id)`                    |
+| `created_at` | timestamptz | default `now()`                              |
+
+Rules:
+
+- `(photo_id, profile_id)` is unique — one reaction per Profile per photo; removing it is a delete, not a second reaction type.
+- Authenticated users can read all reaction rows (needed to render counts on friends' photos).
+- A user can insert or delete only their own reaction rows (`profile_id = auth.uid()`).
+
+### comments
+
+A comment a Profile leaves on a friend's photo, viewed and added from the photo's detail
+screen (reached by tapping the photo or the comment-bubble button in the Home feed).
+
+| column name          | type        | constraints / memo                       |
+| --------------------- | ----------- | ---------------------------------------- |
+| `id`                  | uuid        | primary key, default `gen_random_uuid()` |
+| `user_id`             | uuid        | references `profiles(id)`, not null      |
+| `photo_id`            | uuid        | references `photos(id)`, not null        |
+| `parent_comment_id`   | uuid        | references `comments(id)`, nullable      |
+| `content`             | text        | not null                                 |
+| `created_at`          | timestamptz | not null, default `now()`                |
+
+Rules:
+
+- Authenticated users can read all comment rows (same visibility shape as `photo_reactions`).
+- A user can insert only their own comment rows (`user_id = auth.uid()`); no update or delete yet.
+- `parent_comment_id` exists for a future "comment on a comment" feature and stays nullable — a top-level comment has none. There is no UI for replies yet.
+
+### push_tokens
+
+One Expo Push Token row per app-install token.
+
+| column name  | type        | constraints / memo                               |
+| ------------ | ----------- | ------------------------------------------------ |
+| `id`         | uuid        | primary key, default `gen_random_uuid()`         |
+| `profile_id` | uuid        | references `profiles(id)`, not null              |
+| `token`      | text        | unique Expo Push Token, not null                 |
+| `created_at` | timestamptz | not null, default `now()`                        |
+| `updated_at` | timestamptz | not null, default `now()`                        |
+
+Rules:
+
+- The client upserts on `token` when the Home screen mounts and notification permission is granted.
+- A token identifies an app installation. If the same installation is used by another authenticated Profile, the row is reassigned rather than duplicated.
+- The `push-on-failure` Edge Function reads Friend tokens with the Service Role and sends one Expo Push message per token.
+- Edge Function deployment, Database Webhook configuration, and Webhook secret setup are external to the checked-in migration.
 
 ## RPC Functions
 
@@ -124,14 +199,20 @@ Error codes:
 
 ## Row Level Security
 
-Current RLS policies:
+Policies represented by the incremental SQL in this repository:
 
-- Authenticated users can read Profiles for Friend Search.
-- Authenticated users can insert only their own Profile.
-- Profiles cannot be updated or deleted through current app policies.
-- Authenticated users can read and insert only their own photo records.
-- Authenticated users can read friend relation rows where they are either side.
-- Authenticated users can insert friend relation rows only from their own Profile.
+- Authenticated users can read all photo reaction rows and insert/delete only their own.
+- Authenticated users can read all comment rows and insert only their own.
+- `profile-icon-photos` objects can be inserted/updated only under the authenticated user's folder; the bucket is configured as Public for URL reads.
+- Authenticated users can insert their own Push Token row and reassign an existing token to themselves. A SELECT policy is present so Postgres can resolve the upsert conflict.
+
+Client requirements whose base policy SQL is not checked in:
+
+- Authenticated users can read Profiles for Friend Search and update their own Display Name/Profile Icon.
+- Users can insert their own `photos` and read their own photos plus Friend photos for the Home feed.
+- Users can read friend relation rows where they are either side and insert rows from their own Profile.
+
+Because the base policies are not in the repository, verify the deployed Supabase project before treating the schema as reproducible. In particular, the older own-photo-only/Profile-no-update policy description is not sufficient for the current client.
 
 ## Deferred Backend Tables
 
@@ -141,4 +222,4 @@ These tables were part of the larger MVP design, but they are not in the current
 - `failure_cards`
 - canonical mutual `friendships`
 
-Add them later when implementing Wake Up Challenge result persistence, Friends Feed Access, and Failure Card behavior.
+Add them later when implementing server-side Wake Challenge result persistence, account-scoped Friends Feed Access, and a structured Failure Card model. The current local attempt/access services and simple `photos` flow remain in use until then.

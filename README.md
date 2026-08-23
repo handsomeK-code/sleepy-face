@@ -68,6 +68,15 @@ To learn more about developing your project with Expo, look at the following res
 
 Third-party asset credits, including the preset Profile Icons, are listed in [`docs/attributions.md`](./docs/attributions.md).
 
+## Project documentation
+
+- [Current implementation specification](./docs/current_implementation_spec.md)
+- [MVP target scope](./docs/mvp_scope.md)
+- [Current codebase structure](./docs/codebase_structure.md)
+- [Database design and schema provenance](./docs/database_design.md)
+- [Frontend/backend API contract](./docs/api_contract.md)
+- [Technical stack](./docs/tech_stack.md)
+
 ## Join the community
 
 Join our community of developers creating universal apps.

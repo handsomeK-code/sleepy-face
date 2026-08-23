@@ -14,7 +14,8 @@
         "foregroundImage": "./assets/images/android-adaptive-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": ["android.permission.CAMERA"],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -22,6 +23,15 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/app-icon.png",
+          "imageWidth": 128,
+          "resizeMode": "contain"
+        }
+      ],
       "./plugins/with-android-alarm-mechanics",
       [
         "expo-camera",
@@ -30,7 +40,15 @@
           "recordAudioAndroid": false
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "プロフィールアイコンに設定する写真を選ぶために写真ライブラリを使用します。"
+        }
+      ],
+      "expo-notifications",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -42,6 +60,9 @@
         "projectId": "c6f23530-8c9c-4f32-aa96-e593f6b00324"
       }
     },
-    "owner": "handsomeks-team"
+    "owner": "handsomeks-team",
+    "ios": {
+      "bundleIdentifier": "com.team5.sleepyface"
+    }
   }
 }

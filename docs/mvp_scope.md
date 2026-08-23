@@ -6,6 +6,22 @@ This document defines what belongs in the MVP and what is intentionally out of s
 
 It describes product behavior and rules only. Detailed API contracts, database design, framework choices, and visual design belong in separate documents.
 
+## Implementation Status (2026-08-23)
+
+This document remains the target product scope. It is not a statement that every rule below is already implemented. The code-derived current behavior is recorded in [`current_implementation_spec.md`](./current_implementation_spec.md).
+
+Important current differences from this target are:
+
+- Initial Setup also selects one of eight preset Profile Icons or uploads a custom photo. Display Name and Profile Icon can later be edited, and logout is available from the Settings screen; public User ID remains read-only.
+- The authenticated default route is the Friends Feed at `/home`, with Alarm available as a separate bottom-navigation tab.
+- Saved Alarm editing/deletion is not currently blocked during an active Wake Challenge.
+- The timer is initialized from native ring time on the Ringing screen, but pressing the challenge-start button currently resets it to 60 seconds. There is no separate two-minute Photo Timer.
+- Closing and reopening the app with a persisted active-attempt record is detected as abandonment, but backgrounding, locking, leaving the flow, and active network loss are not monitored for immediate failure.
+- Friend Search currently supports public User ID prefix search only, not Display Name search.
+- Challenge Success does not currently clear a same-day Friends Feed Access block.
+- Universal network detection and the Offline Page are not implemented. The native Android alarm can ring without network access.
+- Alarm scheduling and Face Verification require the custom Android build; iOS, web, and Expo Go are not supported for those native capabilities.
+
 ## MVP Feature Summary
 
 The MVP contains only the features needed to demonstrate the core wake-up experience:
@@ -161,6 +177,29 @@ Rules:
 - Challenge Success restores or allows Friends Feed Access for the current local day.
 - Friends Feed Access does not block Alarm, Friends, or Profile.
 
+### Reactions
+
+A viewer can react to a friend's Failure Card in the feed with a single 😂 reaction.
+
+Rules:
+
+- 😂 is the only reaction; this is not a multi-emoji picker.
+- Reacting is a toggle: tapping again removes the viewer's own reaction.
+- The reaction count is visible to anyone who can see the photo.
+
+### Comments
+
+A viewer can comment on a friend's Failure Card, on the photo's detail screen.
+
+Rules:
+
+- Tapping the photo, or the comment-bubble button, in the Home feed opens the photo's detail screen.
+- The detail screen shows the photo, the 😂 reaction control, the comment count, and the comment thread oldest-first.
+- A viewer can add a comment from the detail screen; the viewer's own comments are labeled "自分" instead of their Display Name.
+- Comments are visible to anyone who can see the photo.
+- Comment on a comment (threaded replies) is optional, not required for the MVP.
+- There is no edit or delete for a comment yet.
+
 ## 7. Profile
 
 Profile is the user's minimal personal area.
@@ -203,8 +242,7 @@ The following are not part of the MVP:
 - Contact import
 - Friend recommendations
 - QR-code friend adding
-- Comments
-- Reactions
+- Threaded comment replies
 - Rankings
 - Public all-user feed
 - Reports
