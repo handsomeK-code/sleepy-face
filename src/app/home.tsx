@@ -1,17 +1,3 @@
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type ListRenderItem,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { BottomNav } from '@/components/bottom-nav';
 import { CommentBubbleIcon } from '@/components/comment-bubble-icon';
 import { FeedLoadingSkeleton } from '@/components/loading-skeletons';
@@ -32,6 +18,20 @@ import {
 } from '@/services/home-feed';
 import { type PhotoRealMoji } from '@/services/photo-realmojis';
 import { registerPushToken } from '@/services/push-token';
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ListRenderItem,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 function getHomeFeedErrorMessage(error: unknown): string {
   if (error instanceof HomeFeedServiceError) {
@@ -324,6 +324,26 @@ export default function HomeScreen() {
             />
           )}
         </View>
+        <Pressable
+          accessibilityLabel="起床に失敗した友達を起こす"
+          accessibilityRole="button"
+          onPress={() => router.push('/wake-friends')}
+          style={({ pressed }) => [
+            styles.wakeFriendsFab,
+            pressed && styles.wakeFriendsFabPressed,
+          ]}
+        >
+          <SymbolView
+            name={{
+              ios: 'bolt.fill',
+              android: 'bolt',
+              web: 'bolt',
+            }}
+            size={28}
+            tintColor="#ffffff"
+            type="monochrome"
+          />
+        </Pressable>
 
         <BottomNav activeRoute="/home" />
       </View>
@@ -499,5 +519,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     textAlign: 'center',
+  },
+  wakeFriendsFab: {
+    alignItems: 'center',
+    backgroundColor: '#171717',
+    borderRadius: 28,
+    bottom: 88,
+    elevation: 8,
+    height: 56,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 24,
+    width: 56,
+    zIndex: 20,
+  },
+  wakeFriendsFabPressed: {
+    opacity: 0.78,
   },
 });
