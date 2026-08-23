@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
 import {
   AlarmServiceError,
   deleteSavedAlarm,
@@ -21,6 +20,7 @@ import {
   updateSavedAlarm,
   type Weekday,
 } from '@/services/alarm';
+import { ensureAlarmPermissions } from '@/services/android-alarm-mechanics';
 
 const ITEM_HEIGHT = 64;
 const WHEEL_VIEWPORT_HEIGHT = 150;
@@ -470,6 +470,7 @@ const styles = StyleSheet.create({
     color: '#171717',
     fontSize: 20,
     fontWeight: '800',
+    fontFamily: 'NoteSansJP_700Bold',
   },
   loadingArea: {
     alignItems: 'center',
@@ -563,6 +564,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginBottom: 18,
     textAlign: 'center',
+    fontFamily: 'NotoSansJP_500Medium',
   },
   weekdayRow: {
     flexDirection: 'row',
@@ -645,5 +647,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '800',
+    fontFamily: 'NOtoSansJP_700Bold',
   },
 });

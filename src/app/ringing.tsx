@@ -14,19 +14,19 @@ import {
   ALARM_TIMER_SECONDS,
   formatRemainingTime,
 } from '@/components/wake-challenge-ui';
-import {
-  AndroidAlarmMechanicsError,
-  getRingingAlarmState,
-  stopRingingAlarm,
-  type RingingAlarmState,
-} from '@/services/android-alarm-mechanics';
+import { recordSavedAlarmFired } from '@/services/alarm';
 import {
   getAlarmTimerState,
   startTimer,
   startTimerFromStartedAt,
   useAlarmTimer,
 } from '@/services/alarm-timer';
-import { recordSavedAlarmFired } from '@/services/alarm';
+import {
+  AndroidAlarmMechanicsError,
+  getRingingAlarmState,
+  stopRingingAlarm,
+  type RingingAlarmState,
+} from '@/services/android-alarm-mechanics';
 import { startWakeChallengeAttempt } from '@/services/wake-challenge-attempt';
 
 function getErrorMessage(error: unknown): string {
@@ -271,6 +271,7 @@ const styles = StyleSheet.create({
     color: '#171717',
     fontSize: 18,
     fontWeight: '800',
+    fontFamily: 'noteSansJP_700Bold',
   },
   caption: {
     color: '#a3a3a3',
@@ -278,6 +279,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 40,
     textAlign: 'center',
+    fontFamily: 'NoteSansJP_700Bold',
   },
   cameraCircle: {
     alignItems: 'center',
@@ -339,6 +341,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     marginBottom: 8,
+    fontFamily: 'NOtoSansJP_700Bold',
   },
   screen: {
     backgroundColor: '#171717',

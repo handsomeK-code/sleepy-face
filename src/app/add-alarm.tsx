@@ -364,6 +364,7 @@ const styles = StyleSheet.create({
     color: '#171717',
     fontSize: 20,
     fontWeight: '800',
+    fontFamily: 'NoteSansJP_700Bold',
   },
   timeSection: {
     alignItems: 'center',
@@ -440,6 +441,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginBottom: 18,
     textAlign: 'center',
+    fontFamily: 'NotoSansJP_500Medium',
   },
   weekdayRow: {
     flexDirection: 'row',
@@ -502,5 +504,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '800',
+    fontFamily: 'NotoSansJP_700Bold',
   },
 });

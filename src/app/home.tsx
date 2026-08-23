@@ -260,6 +260,7 @@ const styles = StyleSheet.create({
     color: '#171717',
     fontSize: 20,
     fontWeight: '800',
+    fontFamily: 'NotoSansJP_700Bold',
   },
   debugButtonRow: {
     flexDirection: 'row',
@@ -347,6 +348,7 @@ const styles = StyleSheet.create({
     color: '#171717',
     fontSize: 15,
     fontWeight: '800',
+    fontFamily: 'NoteSansJP_700Bold',
   },
   feedDate: {
     color: '#737373',

@@ -84,14 +84,12 @@ async function checkAbandonedWakeChallengeAttempt(
 
 export default function RootLayout() {
   const pathname = usePathname();
-  const [fontsLoaded, error] = useFonts({
+  useFonts({
     NotoSansJP_400Regular,
     NotoSansJP_500Medium,
     NotoSansJP_700Bold,
   });
-  console.log('aaaaaaa');
-  console.log(fontsLoaded);
-  console.log(error); //todo:ロードの完了/未完了を判定して、未完了の場合はローディングを入れる
+  //todo:ロードの完了/未完了を判定して、未完了の場合はローディングを入れる
 
   useEffect(() => {
     let isActive = true;
@@ -163,12 +161,6 @@ export default function RootLayout() {
       isActive = false;
     };
   }, [pathname]);
-
-  if (!fontsLoaded) {
-    console.log('fontsLoadedが falseだったとき');
-    console.log(fontsLoaded);
-    return null;
-  }
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }

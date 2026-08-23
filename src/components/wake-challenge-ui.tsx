@@ -85,6 +85,7 @@ export const challengeStyles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 34,
     textAlign: 'center',
+    fontFamily: 'NotoSansJP_700Bold',
   },
 });
 

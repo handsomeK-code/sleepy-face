@@ -305,6 +305,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
     textAlign: 'left',
+    fontFamily: 'NotoSansJP_700Bold',
   },
   avatarSection: {
     alignItems: 'center',
@@ -395,6 +396,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
+    fontFamily: 'NotoSansJP_700Bold',
   },
   errorText: {
     color: '#b42318',

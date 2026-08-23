@@ -13,11 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/components/bottom-nav';
 import {
-  AndroidAlarmMechanicsError,
-  ensureAlarmPermissions,
-  scheduleTestAlarm,
-} from '@/services/android-alarm-mechanics';
-import {
   AlarmServiceError,
   alarmWillSkipToday,
   clearAlarmFiredToday,
@@ -26,6 +21,11 @@ import {
   type SavedAlarm,
   type Weekday,
 } from '@/services/alarm';
+import {
+  AndroidAlarmMechanicsError,
+  ensureAlarmPermissions,
+  scheduleTestAlarm,
+} from '@/services/android-alarm-mechanics';
 import { getDevMode } from '@/services/dev-mode';
 
 const WEEKDAY_LABELS: Record<Weekday, string> = {
@@ -402,8 +402,8 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#171717',
+    fontFamily: 'NotoSansJP_700Bold',
     fontSize: 20,
-    fontWeight: '800',
   },
   debugToggleText: {
     color: '#b42318',
@@ -529,6 +529,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 20,
     paddingVertical: 28,
+    fontFamily: 'NotoSansJP_700Bold',
   },
   emptyTitle: {
     color: '#171717',
@@ -541,6 +542,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     textAlign: 'center',
+    fontFamily: 'NotoSansJP_700Bold',
   },
   fab: {
     alignItems: 'center',
