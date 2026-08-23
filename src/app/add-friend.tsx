@@ -364,6 +364,7 @@ const styles = StyleSheet.create({
     color: '#171717',
     fontSize: 20,
     fontWeight: '800',
+    fontFamily: 'NoteSansJP_700Bold',
   },
   content: {
     flex: 1,
@@ -464,6 +465,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     marginBottom: 4,
+    fontFamily: 'NotoSansJP_700Bold',
   },
   userId: {
     color: '#737373',
