@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -29,6 +30,14 @@ class AlarmRingingModule : Module() {
 
     AsyncFunction("openExactAlarmSettings") {
       openExactAlarmSettings()
+    }
+
+    AsyncFunction("isIgnoringBatteryOptimizations") {
+      isIgnoringBatteryOptimizations()
+    }
+
+    AsyncFunction("requestIgnoreBatteryOptimizations") {
+      requestIgnoreBatteryOptimizations()
     }
 
     AsyncFunction("getNotificationPermissionStatus") {
@@ -84,6 +93,27 @@ class AlarmRingingModule : Module() {
     }
 
     val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+      data = Uri.parse("package:${context.packageName}")
+      addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    context.startActivity(intent)
+  }
+
+  // setAlarmClock (used to schedule below) is documented to be exempt from Doze/App
+  // Standby, but several OEM Android skins (this shipped on a Sharp AQUOS device) run
+  // their own background-process killer on top of stock Android that can still swipe
+  // the alarm away when the app is removed from Recents, regardless of that exemption.
+  // Asking the user to whitelist the app from battery optimization is the standard,
+  // Play-Store-compliant way to opt out of that OEM-level killing.
+  private fun isIgnoringBatteryOptimizations(): Boolean {
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+
+    return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+  }
+
+  private fun requestIgnoreBatteryOptimizations() {
+    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
       data = Uri.parse("package:${context.packageName}")
       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }

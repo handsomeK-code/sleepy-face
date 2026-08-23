@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
+    fontFamily: 'NoteSansJP_700Bold',
   },
   content: {
     alignItems: 'center',
@@ -118,5 +119,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 34,
     textAlign: 'center',
+    fontFamily: 'NotoSansJP_700Bold',
   },
 });

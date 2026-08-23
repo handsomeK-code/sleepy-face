@@ -11,6 +11,12 @@ import {
   getAbandonedWakeChallengeAttemptOutcome,
   getWakeChallengeAttempt,
 } from '@/services/wake-challenge-attempt';
+import {
+  NotoSansJP_400Regular,
+  NotoSansJP_500Medium,
+  NotoSansJP_700Bold,
+  useFonts,
+} from '@expo-google-fonts/noto-sans-jp';
 
 const SAVED_ALARM_BOOT_RESYNC_TASK_NAME = 'SavedAlarmBootResync';
 
@@ -84,6 +90,12 @@ async function checkAbandonedWakeChallengeAttempt(
 
 export default function RootLayout() {
   const pathname = usePathname();
+  useFonts({
+    NotoSansJP_400Regular,
+    NotoSansJP_500Medium,
+    NotoSansJP_700Bold,
+  });
+  //todo:ロードの完了/未完了を判定して、未完了の場合はローディングを入れる
 
   useEffect(() => {
     let isActive = true;

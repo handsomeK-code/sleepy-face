@@ -68,10 +68,17 @@ function getCreateAlarmErrorMessage(error: unknown): string {
 }
 
 function getPermissionDeniedMessage(
-  reason: 'exact_alarm_unavailable' | 'notification_permission_denied',
+  reason:
+    | 'battery_optimization_enabled'
+    | 'exact_alarm_unavailable'
+    | 'notification_permission_denied',
 ): string {
   if (reason === 'notification_permission_denied') {
     return '通知の権限が必要です。許可してからもう一度お試しください。';
+  }
+
+  if (reason === 'battery_optimization_enabled') {
+    return 'バッテリーの最適化を「制限なし」に変更してから、もう一度お試しください。これをしないと、アプリを閉じている間にアラームが鳴らないことがあります。';
   }
 
   return '「アラームとリマインダー」の権限を許可してから、もう一度お試しください。';
@@ -412,6 +419,7 @@ const styles = StyleSheet.create({
     color: '#171717',
     fontSize: 20,
     fontWeight: '800',
+    fontFamily: 'NoteSansJP_700Bold',
   },
   timeSection: {
     alignItems: 'center',
@@ -488,6 +496,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginBottom: 18,
     textAlign: 'center',
+    fontFamily: 'NotoSansJP_500Medium',
   },
   weekdayRow: {
     flexDirection: 'row',
@@ -579,5 +588,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '800',
+    fontFamily: 'NotoSansJP_700Bold',
   },
 });
