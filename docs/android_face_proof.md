@@ -55,4 +55,4 @@ Expo Go is not an acceptance path because the detector is native code.
 - Face recognition or identity matching
 - Liveness, spoof detection, smile, eye-open, landmark, contour, or head-angle checks
 - Server-side face detection
-- A separate per-photo timer; the current flow uses the shared 180-second Alarm Timer
+- A separate per-photo timer; the current flow uses the shared 60-second Alarm Timer
