@@ -15,7 +15,7 @@ Important current differences from this target are:
 - Initial Setup also selects one of eight preset Profile Icons or uploads a custom photo. Display Name and Profile Icon can later be edited, and logout is available from the Settings screen; public User ID remains read-only.
 - The authenticated default route is the Friends Feed at `/home`, with Alarm available as a separate bottom-navigation tab.
 - Saved Alarm editing/deletion is not currently blocked during an active Wake Challenge.
-- The timer is initialized from native ring time on the Ringing screen, but pressing the challenge-start button currently resets it to 180 seconds. There is no separate two-minute Photo Timer.
+- The timer is initialized from native ring time on the Ringing screen, but pressing the challenge-start button currently resets it to 60 seconds. There is no separate two-minute Photo Timer.
 - Closing and reopening the app with a persisted active-attempt record is detected as abandonment, but backgrounding, locking, leaving the flow, and active network loss are not monitored for immediate failure.
 - Friend Search currently supports public User ID prefix search only, not Display Name search.
 - Challenge Success does not currently clear a same-day Friends Feed Access block.
